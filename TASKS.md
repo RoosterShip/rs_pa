@@ -77,21 +77,21 @@ This approach ensures:
 - Task 1.1 completed (basic PySide6 window setup)
 
 **Acceptance Criteria**:
-- [ ] Create `src/ui/views/dashboard_view.py` with proper QWidget layout
-- [ ] Implement professional header section with title and refresh button
-- [ ] Add system status indicators for Ollama, Gmail, and Database with colored status dots
-- [ ] Create agent management section with QTableView
-- [ ] Implement `src/ui/models/agent_table_model.py` for Qt Model-View architecture
-- [ ] Create `src/ui/widgets/status_indicator_widget.py` for service status display
-- [ ] Mock agent data showing different states:
+- [x] Create `src/ui/views/dashboard_view.py` with proper QWidget layout
+- [x] Implement professional header section with title and refresh button
+- [x] Add system status indicators for Ollama, Gmail, and Database with colored status dots
+- [x] Create agent management section with QTableView
+- [x] Implement `src/ui/models/agent_table_model.py` for Qt Model-View architecture
+- [x] Create `src/ui/widgets/status_indicator_widget.py` for service status display
+- [x] Mock agent data showing different states:
   - "Email Scanner" - Running state (green)
   - "Task Manager" - Idle state (yellow)
   - "Calendar Agent" - Error state (red)
   - "Document Processor" - Disabled state (gray)
-- [ ] Table shows: name, type, status, last run time, with proper row coloring
-- [ ] Add right-click context menu for agent actions
-- [ ] Implement window resize handling and proper layout management
-- [ ] All interactions work with mock data and show meaningful feedback
+- [x] Table shows: name, type, status, last run time, with proper row coloring
+- [x] Add right-click context menu for agent actions
+- [x] Implement window resize handling and proper layout management
+- [x] All interactions work with mock data and show meaningful feedback
 
 **Result**: A visually complete native desktop dashboard with professional Qt styling.
 
