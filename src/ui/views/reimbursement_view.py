@@ -374,46 +374,12 @@ class ReimbursementView(QWidget):
         self._progress_widget.update_progress(progress)
 
     def _handle_agent_result(self, result: Dict[str, Any]) -> None:
-        """Handle agent results."""
-        # Update the results model with real data
+        """Handle LLM agent results with enhanced analysis data."""
+        # Load LLM results directly using the enhanced model method
         expense_results = result.get("expense_results", [])
-        self._results_model.clear_results()
 
-        # Import the ExpenseData class
-        from ..models.reimbursement_results_model import ExpenseData
-
-        for expense_data in expense_results:
-            # Convert agent result format to ExpenseData format
-            # Parse date from string to datetime if needed
-            import datetime as dt
-
-            expense_date = expense_data.get("expense_date") or expense_data.get(
-                "email_date", ""
-            )
-            if isinstance(expense_date, str) and expense_date:
-                try:
-                    expense_datetime = dt.datetime.fromisoformat(expense_date)
-                except (ValueError, TypeError):
-                    expense_datetime = dt.datetime.now()
-            elif isinstance(expense_date, dt.datetime):
-                expense_datetime = expense_date
-            else:
-                expense_datetime = dt.datetime.now()
-
-            expense = ExpenseData(
-                date=expense_datetime,
-                subject=expense_data.get("email_subject", ""),
-                sender=expense_data.get("email_from", "Unknown"),
-                vendor=expense_data.get("vendor", "Unknown"),
-                amount=expense_data.get("amount", 0.0),
-                category=expense_data.get("category", "Other"),
-                status="Reimbursable",  # Default status for detected expenses
-                description=expense_data.get("description", ""),
-                confidence=expense_data.get("confidence_score", 0.0)
-                * 100,  # Convert to 0-100 scale
-                email_id=expense_data.get("gmail_message_id", ""),
-            )
-            self._results_model.add_expense(expense)
+        # Use the new load_llm_results method that handles all the LLM analysis data
+        self._results_model.load_llm_results(expense_results)
 
     def _handle_agent_error(self, error_msg: str) -> None:
         """Handle agent errors."""

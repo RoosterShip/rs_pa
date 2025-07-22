@@ -5,12 +5,16 @@ This module defines the LangGraph StateGraph workflow for processing
 emails and extracting expense information with stateful management.
 """
 
+import json
 import logging
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, TypedDict
 
+from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
+
+from .prompts import ReimbursementPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +24,7 @@ class ReimbursementState(TypedDict):
     State schema for the reimbursement agent workflow.
 
     This defines the state variables that persist throughout
-    the LangGraph workflow execution.
+    the LangGraph workflow execution with advanced LLM integration.
     """
 
     # Input parameters
@@ -36,13 +40,22 @@ class ReimbursementState(TypedDict):
     emails: List[Dict[str, Any]]
     processed_emails: int
 
+    # LLM Processing data
+    llm_analyses: List[Dict[str, Any]]  # Store LLM analysis results
+    confidence_threshold: float  # Minimum confidence for auto-acceptance
+    retry_count: int  # Track retries for failed LLM calls
+
     # Results
     expense_results: List[Dict[str, Any]]
     expenses_found: int
     total_amount: float
+    high_confidence_count: int  # Track high-confidence detections
+    low_confidence_count: int  # Track low-confidence detections
 
-    # Error handling
+    # Error handling and performance
     errors: List[str]
+    llm_errors: List[str]  # Specific LLM-related errors
+    processing_times: Dict[str, float]  # Track node processing times
 
     # Database integration
     scan_id: Optional[int]
@@ -59,33 +72,78 @@ def create_reimbursement_graph() -> Any:
     # Create the state graph
     workflow = StateGraph(ReimbursementState)
 
-    # Add nodes
+    # Add nodes for advanced LLM workflow
     workflow.add_node("fetch_emails", fetch_emails_node)
-    workflow.add_node("process_emails", process_emails_node)
-    workflow.add_node("extract_data", extract_data_node)
+    workflow.add_node("preprocess_emails", preprocess_emails_node)
+    workflow.add_node("llm_bill_detection", llm_bill_detection_node)
+    workflow.add_node("llm_information_extraction", llm_information_extraction_node)
+    workflow.add_node("confidence_evaluation", confidence_evaluation_node)
+    workflow.add_node("validate_results", validate_results_node)
     workflow.add_node("store_results", store_results_node)
     workflow.add_node("handle_error", handle_error_node)
+    workflow.add_node("retry_llm", retry_llm_node)
 
-    # Define the workflow flow
+    # Define the workflow flow with advanced routing
     workflow.set_entry_point("fetch_emails")
 
-    # Add conditional edges
+    # Add conditional edges for sophisticated workflow
     workflow.add_conditional_edges(
         "fetch_emails",
         _should_continue_after_fetch,
-        {"continue": "process_emails", "error": "handle_error", "end": END},
+        {"continue": "preprocess_emails", "error": "handle_error", "end": END},
     )
 
     workflow.add_conditional_edges(
-        "process_emails",
-        _should_continue_after_process,
-        {"continue": "extract_data", "error": "handle_error"},
+        "preprocess_emails",
+        _should_continue_after_preprocess,
+        {"continue": "llm_bill_detection", "error": "handle_error"},
     )
 
     workflow.add_conditional_edges(
-        "extract_data",
-        _should_continue_after_extract,
+        "llm_bill_detection",
+        _should_continue_after_detection,
+        {
+            "continue": "llm_information_extraction",
+            "error": "handle_error",
+            "retry": "retry_llm",
+            "skip": "store_results",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "llm_information_extraction",
+        _should_continue_after_extraction,
+        {
+            "continue": "confidence_evaluation",
+            "error": "handle_error",
+            "retry": "retry_llm",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "confidence_evaluation",
+        _should_continue_after_confidence,
+        {
+            "continue": "validate_results",
+            "error": "handle_error",
+            "review": "store_results",  # Store with review flag
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "validate_results",
+        _should_continue_after_validation,
         {"continue": "store_results", "error": "handle_error"},
+    )
+
+    workflow.add_conditional_edges(
+        "retry_llm",
+        _should_continue_after_retry,
+        {
+            "detection": "llm_bill_detection",
+            "extraction": "llm_information_extraction",
+            "error": "handle_error",
+        },
     )
 
     workflow.add_edge("store_results", END)
@@ -133,12 +191,19 @@ def fetch_emails_node(state: ReimbursementState) -> ReimbursementState:
 
         emails = gmail_service.get_recent_messages(query=query, max_results=max_results)
 
-        # Update state
+        # Update state with new LLM-related fields
         state["emails"] = emails
         state["processed_emails"] = 0
-        state["progress"] = 25
+        state["llm_analyses"] = []
+        state["confidence_threshold"] = 75.0  # Default confidence threshold
+        state["retry_count"] = 0
+        state["high_confidence_count"] = 0
+        state["low_confidence_count"] = 0
+        state["llm_errors"] = []
+        state["processing_times"] = {}
+        state["progress"] = 20
 
-        logger.info(f"Fetched {len(emails)} emails")
+        logger.info(f"Fetched {len(emails)} emails for LLM processing")
 
         return state
 
@@ -149,96 +214,620 @@ def fetch_emails_node(state: ReimbursementState) -> ReimbursementState:
         return state
 
 
-def process_emails_node(state: ReimbursementState) -> ReimbursementState:
+def preprocess_emails_node(state: ReimbursementState) -> ReimbursementState:
     """
-    Process fetched emails to identify potential expenses.
+    Preprocess fetched emails for LLM analysis.
 
     Args:
         state: Current workflow state
 
     Returns:
-        Updated state with processing results
+        Updated state with preprocessed email data
     """
     try:
-        logger.info("Processing emails for expense detection")
+        start_time = datetime.utcnow().timestamp()
+        logger.info("Preprocessing emails for LLM analysis")
 
-        state["current_step"] = "processing_emails"
-        state["progress"] = 35
+        state["current_step"] = "preprocessing_emails"
+        state["progress"] = 25
 
         emails = state.get("emails", [])
-        potential_expenses = []
+        processed_emails = []
 
-        # Define expense keywords for simple detection
-        expense_keywords = [
-            "receipt",
-            "invoice",
-            "payment",
-            "purchase",
-            "expense",
-            "reimbursement",
-            "bill",
-            "charge",
-            "transaction",
-            "uber",
-            "lyft",
-            "amazon",
-            "hotel",
-            "restaurant",
-            "airline",
-            "travel",
-            "taxi",
-            "parking",
-            "fuel",
-            "office",
-            "supplies",
-            "software",
-            "subscription",
-        ]
-
-        # Process each email
         for i, email in enumerate(emails):
             try:
-                # Simple keyword-based detection
-                subject = email.get("subject", "").lower()
-                snippet = email.get("snippet", "").lower()
+                # Clean and normalize email content
+                subject = email.get("subject", "").strip()
+                snippet = email.get("snippet", "").strip()
+                from_field = email.get("from", "").strip()
 
-                # Check for expense keywords
-                has_expense_keywords = any(
-                    keyword in subject or keyword in snippet
-                    for keyword in expense_keywords
-                )
+                # Extract meaningful text content
+                if len(snippet) > 500:
+                    snippet = snippet[:500] + "..."
 
-                if has_expense_keywords:
-                    potential_expenses.append(
-                        {
-                            "email": email,
-                            "detection_method": "keyword_match",
-                            "confidence": 0.7,  # Basic confidence for keyword matching
-                        }
-                    )
+                # Remove excessive whitespace and normalize
+                subject = re.sub(r"\s+", " ", subject)
+                snippet = re.sub(r"\s+", " ", snippet)
+
+                # Create preprocessed email data
+                processed_email = {
+                    "id": email.get("id"),
+                    "thread_id": email.get("thread_id"),
+                    "subject": subject,
+                    "snippet": snippet,
+                    "from": from_field,
+                    "date": email.get("date"),
+                    "original": email,  # Keep original for reference
+                    "text_length": len(subject + " " + snippet),
+                    "preprocessing_notes": [],
+                }
+
+                # Add preprocessing notes if needed
+                if len(email.get("snippet", "")) > 500:
+                    processed_email["preprocessing_notes"].append("Content truncated")
+
+                if not subject:
+                    processed_email["preprocessing_notes"].append("No subject")
+
+                if not snippet:
+                    processed_email["preprocessing_notes"].append("No content")
+
+                processed_emails.append(processed_email)
 
                 # Update progress
-                progress = 35 + int((i + 1) / len(emails) * 30)  # 35% to 65%
+                progress = 25 + int((i + 1) / len(emails) * 10)  # 25% to 35%
                 state["progress"] = progress
 
             except Exception as email_error:
                 logger.warning(
-                    f"Error processing email {email.get('id', 'unknown')}: "
-                    f"{email_error}"
+                    f"Error preprocessing email {email.get('id')}: {email_error}"
                 )
+                state["llm_errors"].append(f"Preprocessing error: {email_error}")
                 continue
 
         # Update state
-        state["emails"] = potential_expenses
-        state["processed_emails"] = len(emails)
-        state["progress"] = 65
+        state["emails"] = processed_emails
+        state["progress"] = 35
 
-        logger.info(f"Found {len(potential_expenses)} potential expense emails")
+        # Record processing time
+        processing_time = datetime.utcnow().timestamp() - start_time
+        state["processing_times"]["preprocess"] = processing_time
+
+        logger.info(
+            f"Preprocessed {len(processed_emails)} emails in {processing_time:.2f}s"
+        )
 
         return state
 
     except Exception as error:
-        error_msg = f"Error processing emails: {error}"
+        error_msg = f"Error preprocessing emails: {error}"
+        logger.error(error_msg)
+        state["errors"].append(error_msg)
+        return state
+
+
+def llm_bill_detection_node(state: ReimbursementState) -> ReimbursementState:
+    """
+    Use LLM to detect bills and reimbursable expenses in emails.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with LLM detection results
+    """
+    try:
+        start_time = datetime.utcnow().timestamp()
+        logger.info("Starting LLM-powered bill detection")
+
+        state["current_step"] = "llm_bill_detection"
+        state["progress"] = 40
+
+        # Import LLM manager
+        from ...core.llm_manager import get_llm_manager
+
+        llm_manager = get_llm_manager()
+        if not llm_manager or not llm_manager.is_connected():
+            error_msg = "LLM manager not available or not connected"
+            state["llm_errors"].append(error_msg)
+            logger.error(error_msg)
+            return state
+
+        emails = state.get("emails", [])
+        llm_analyses = []
+        potential_expenses = []
+
+        # Process each email with LLM
+        for i, email in enumerate(emails):
+            try:
+                # Create detection prompt
+                prompt = ReimbursementPrompts.get_bill_detection_prompt(
+                    email_subject=email.get("subject", ""),
+                    email_snippet=email.get("snippet", ""),
+                    email_from=email.get("from", ""),
+                )
+
+                # Call LLM for detection
+                response = llm_manager.invoke_sync([HumanMessage(content=prompt)])
+
+                # Parse JSON response
+                try:
+                    analysis_result = json.loads(response)
+                except json.JSONDecodeError as json_error:
+                    logger.warning(
+                        f"Failed to parse LLM response as JSON: {json_error}"
+                    )
+                    # Fallback to keyword detection
+                    analysis_result = _fallback_keyword_detection(email)
+
+                # Store analysis result
+                analysis_result["email_id"] = email.get("id")
+                analysis_result["processing_method"] = "llm_detection"
+                analysis_result["timestamp"] = datetime.utcnow().isoformat()
+                llm_analyses.append(analysis_result)
+
+                # Add to potential expenses if reimbursable
+                if analysis_result.get("is_reimbursable", False):
+                    potential_expenses.append(
+                        {
+                            "email": email,
+                            "llm_analysis": analysis_result,
+                            "detection_method": "llm_analysis",
+                            "confidence": analysis_result.get("confidence", 0),
+                        }
+                    )
+
+                    # Track confidence levels
+                    confidence = analysis_result.get("confidence", 0)
+                    if confidence >= state.get("confidence_threshold", 75):
+                        state["high_confidence_count"] += 1
+                    else:
+                        state["low_confidence_count"] += 1
+
+                # Update progress
+                progress = 40 + int((i + 1) / len(emails) * 25)  # 40% to 65%
+                state["progress"] = progress
+
+            except Exception as email_error:
+                logger.warning(
+                    f"Error in LLM detection for email {email.get('id')}: {email_error}"
+                )
+                state["llm_errors"].append(f"LLM detection error: {email_error}")
+
+                # Fallback to keyword detection
+                fallback_result = _fallback_keyword_detection(email)
+                llm_analyses.append(fallback_result)
+
+                if fallback_result.get("is_reimbursable", False):
+                    potential_expenses.append(
+                        {
+                            "email": email,
+                            "llm_analysis": fallback_result,
+                            "detection_method": "fallback_keyword",
+                            "confidence": fallback_result.get("confidence", 0),
+                        }
+                    )
+                continue
+
+        # Update state
+        state["emails"] = potential_expenses
+        state["llm_analyses"] = llm_analyses
+        state["processed_emails"] = len(emails)
+        state["progress"] = 65
+
+        # Record processing time
+        processing_time = datetime.utcnow().timestamp() - start_time
+        state["processing_times"]["llm_detection"] = processing_time
+
+        logger.info(
+            f"LLM detected {len(potential_expenses)} potential expenses from "
+            f"{len(emails)} emails in {processing_time:.2f}s"
+        )
+
+        return state
+
+    except Exception as error:
+        error_msg = f"Error in LLM bill detection: {error}"
+        logger.error(error_msg)
+        state["errors"].append(error_msg)
+        state["llm_errors"].append(error_msg)
+        return state
+
+
+def llm_information_extraction_node(state: ReimbursementState) -> ReimbursementState:
+    """
+    Use LLM to extract detailed information from detected expenses.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with extracted information
+    """
+    try:
+        start_time = datetime.utcnow().timestamp()
+        logger.info("Starting LLM information extraction")
+
+        state["current_step"] = "llm_information_extraction"
+        state["progress"] = 70
+
+        # Import LLM manager
+        from ...core.llm_manager import get_llm_manager
+
+        llm_manager = get_llm_manager()
+        if not llm_manager or not llm_manager.is_connected():
+            error_msg = "LLM manager not available for information extraction"
+            state["llm_errors"].append(error_msg)
+            logger.error(error_msg)
+            return state
+
+        potential_expenses = state.get("emails", [])
+        extracted_results = []
+        total_amount = 0.0
+
+        # Extract information from each potential expense
+        for i, expense_data in enumerate(potential_expenses):
+            try:
+                email = expense_data["email"]
+
+                # Create extraction prompt
+                prompt = ReimbursementPrompts.get_information_extraction_prompt(
+                    email_subject=email.get("subject", ""),
+                    email_snippet=email.get("snippet", ""),
+                    email_from=email.get("from", ""),
+                    email_date=email.get("date"),
+                )
+
+                # Call LLM for extraction
+                response = llm_manager.invoke_sync([HumanMessage(content=prompt)])
+
+                # Parse JSON response
+                try:
+                    extraction_result = json.loads(response)
+                except json.JSONDecodeError as json_error:
+                    logger.warning(f"Failed to parse extraction response: {json_error}")
+                    # Fallback to basic extraction
+                    extraction_result = _fallback_information_extraction(email)
+
+                # Create final result record
+                result = {
+                    "gmail_message_id": email.get("id"),
+                    "gmail_thread_id": email.get("thread_id"),
+                    "email_subject": email.get("subject"),
+                    "email_from": email.get("from"),
+                    "email_date": _parse_email_date(email.get("date")),
+                    # LLM extracted information
+                    "amount": extraction_result.get("amount"),
+                    "amount_confidence": extraction_result.get("amount_confidence", 0),
+                    "vendor": extraction_result.get("vendor"),
+                    "vendor_confidence": extraction_result.get("vendor_confidence", 0),
+                    "category": extraction_result.get("category"),
+                    "category_confidence": extraction_result.get(
+                        "category_confidence", 0
+                    ),
+                    "description": extraction_result.get("description"),
+                    "transaction_date": extraction_result.get("transaction_date"),
+                    "currency": extraction_result.get("currency", "USD"),
+                    "overall_confidence": extraction_result.get(
+                        "overall_confidence", 0
+                    ),
+                    # Detection information
+                    "detection_method": expense_data.get("detection_method"),
+                    "detection_confidence": expense_data.get("confidence", 0),
+                    "llm_analysis": expense_data.get("llm_analysis", {}),
+                    # Processing metadata
+                    "extraction_method": "llm_extraction",
+                    "extraction_timestamp": datetime.utcnow().isoformat(),
+                }
+
+                extracted_results.append(result)
+
+                # Add to total amount if available
+                amount = extraction_result.get("amount")
+                if amount and isinstance(amount, (int, float)):
+                    total_amount += float(amount)
+
+                # Update progress
+                progress = 70 + int(
+                    (i + 1) / len(potential_expenses) * 15
+                )  # 70% to 85%
+                state["progress"] = progress
+
+            except Exception as extraction_error:
+                logger.warning(f"Error extracting from email: {extraction_error}")
+                state["llm_errors"].append(f"Extraction error: {extraction_error}")
+                continue
+
+        # Update state
+        state["expense_results"] = extracted_results
+        state["expenses_found"] = len(extracted_results)
+        state["total_amount"] = total_amount
+        state["progress"] = 85
+
+        # Record processing time
+        processing_time = datetime.utcnow().timestamp() - start_time
+        state["processing_times"]["llm_extraction"] = processing_time
+
+        logger.info(
+            f"Extracted information from {len(extracted_results)} expenses, "
+            f"total: ${total_amount:.2f} in {processing_time:.2f}s"
+        )
+
+        return state
+
+    except Exception as error:
+        error_msg = f"Error in LLM information extraction: {error}"
+        logger.error(error_msg)
+        state["errors"].append(error_msg)
+        state["llm_errors"].append(error_msg)
+        return state
+
+
+def confidence_evaluation_node(state: ReimbursementState) -> ReimbursementState:
+    """
+    Evaluate confidence and quality of LLM analysis results.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with confidence evaluation
+    """
+    try:
+        start_time = datetime.utcnow().timestamp()
+        logger.info("Starting confidence evaluation")
+
+        state["current_step"] = "confidence_evaluation"
+        state["progress"] = 87
+
+        # Get LLM manager
+        from ...core.llm_manager import get_llm_manager
+
+        llm_manager = get_llm_manager()
+        if not llm_manager or not llm_manager.is_connected():
+            logger.warning("LLM manager not available for confidence evaluation")
+            # Skip evaluation but continue
+            state["progress"] = 90
+            return state
+
+        expense_results = state.get("expense_results", [])
+        llm_analyses = state.get("llm_analyses", [])
+
+        evaluated_results = []
+        high_quality_count = 0
+
+        # Evaluate each result
+        for result in expense_results:
+            try:
+                # Find corresponding detection analysis
+                email_id = result.get("gmail_message_id")
+                detection_analysis = None
+                for analysis in llm_analyses:
+                    if analysis.get("email_id") == email_id:
+                        detection_analysis = analysis
+                        break
+
+                if detection_analysis:
+                    # Create evaluation prompt
+                    prompt = ReimbursementPrompts.get_confidence_evaluation_prompt(
+                        detection_result=detection_analysis, extraction_result=result
+                    )
+
+                    # Call LLM for evaluation
+                    response = llm_manager.invoke_sync([HumanMessage(content=prompt)])
+
+                    # Parse evaluation result
+                    try:
+                        evaluation = json.loads(response)
+                        result["confidence_evaluation"] = evaluation
+                        result["final_confidence"] = evaluation.get(
+                            "overall_confidence", 0
+                        )
+                        result["quality_score"] = evaluation.get("quality_score", 0)
+                        result["needs_review"] = (
+                            evaluation.get("final_decision") == "REVIEW"
+                        )
+
+                        if evaluation.get("quality_score", 0) >= 80:
+                            high_quality_count += 1
+
+                    except json.JSONDecodeError:
+                        logger.warning("Failed to parse confidence evaluation response")
+                        result["confidence_evaluation"] = {"error": "parsing_failed"}
+                        result["needs_review"] = True
+
+                evaluated_results.append(result)
+
+            except Exception as eval_error:
+                logger.warning(f"Error evaluating result: {eval_error}")
+                result["confidence_evaluation"] = {"error": str(eval_error)}
+                result["needs_review"] = True
+                evaluated_results.append(result)
+                continue
+
+        # Update state
+        state["expense_results"] = evaluated_results
+        state["progress"] = 90
+
+        # Record processing time and stats
+        processing_time = datetime.utcnow().timestamp() - start_time
+        state["processing_times"]["confidence_evaluation"] = processing_time
+
+        logger.info(
+            f"Evaluated {len(evaluated_results)} results, "
+            f"{high_quality_count} high-quality in {processing_time:.2f}s"
+        )
+
+        return state
+
+    except Exception as error:
+        error_msg = f"Error in confidence evaluation: {error}"
+        logger.error(error_msg)
+        state["errors"].append(error_msg)
+        return state
+
+
+def validate_results_node(state: ReimbursementState) -> ReimbursementState:
+    """
+    Validate extracted expense data for accuracy and completeness.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with validated results
+    """
+    try:
+        start_time = datetime.utcnow().timestamp()
+        logger.info("Starting results validation")
+
+        state["current_step"] = "validating_results"
+        state["progress"] = 92
+
+        expense_results = state.get("expense_results", [])
+        validated_results = []
+
+        for result in expense_results:
+            try:
+                # Basic validation checks
+                validation_notes = []
+                validation_score = 100
+
+                # Check required fields
+                if not result.get("amount"):
+                    validation_notes.append("Missing amount")
+                    validation_score -= 30
+
+                if not result.get("vendor"):
+                    validation_notes.append("Missing vendor")
+                    validation_score -= 20
+
+                if not result.get("category"):
+                    validation_notes.append("Missing category")
+                    validation_score -= 15
+
+                # Check data quality
+                amount = result.get("amount")
+                if amount is not None and amount <= 0:
+                    validation_notes.append("Invalid amount value")
+                    validation_score -= 25
+
+                # Check confidence levels
+                overall_confidence = result.get("overall_confidence", 0)
+                if overall_confidence < 60:
+                    validation_notes.append("Low extraction confidence")
+                    validation_score -= 20
+
+                # Set validation status
+                if validation_score >= 80:
+                    validation_status = "PASS"
+                elif validation_score >= 60:
+                    validation_status = "WARNING"
+                else:
+                    validation_status = "FAIL"
+
+                # Add validation metadata
+                result["validation"] = {
+                    "status": validation_status,
+                    "score": validation_score,
+                    "notes": validation_notes,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+
+                validated_results.append(result)
+
+            except Exception as validation_error:
+                logger.warning(f"Error validating result: {validation_error}")
+                result["validation"] = {
+                    "status": "ERROR",
+                    "score": 0,
+                    "notes": [f"Validation error: {validation_error}"],
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                validated_results.append(result)
+                continue
+
+        # Update state
+        state["expense_results"] = validated_results
+        state["progress"] = 95
+
+        # Record processing time
+        processing_time = datetime.utcnow().timestamp() - start_time
+        state["processing_times"]["validation"] = processing_time
+
+        # Count validation results
+        pass_count = sum(
+            1
+            for r in validated_results
+            if r.get("validation", {}).get("status") == "PASS"
+        )
+        warning_count = sum(
+            1
+            for r in validated_results
+            if r.get("validation", {}).get("status") == "WARNING"
+        )
+        fail_count = sum(
+            1
+            for r in validated_results
+            if r.get("validation", {}).get("status") == "FAIL"
+        )
+
+        logger.info(
+            f"Validated {len(validated_results)} results in {processing_time:.2f}s: "
+            f"{pass_count} passed, {warning_count} warnings, {fail_count} failed"
+        )
+
+        return state
+
+    except Exception as error:
+        error_msg = f"Error in results validation: {error}"
+        logger.error(error_msg)
+        state["errors"].append(error_msg)
+        return state
+
+
+def retry_llm_node(state: ReimbursementState) -> ReimbursementState:
+    """
+    Handle LLM retries with exponential backoff.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with retry handling
+    """
+    try:
+        logger.info("Handling LLM retry")
+
+        retry_count = state.get("retry_count", 0)
+        max_retries = 3
+
+        if retry_count >= max_retries:
+            error_msg = f"Maximum LLM retries ({max_retries}) exceeded"
+            logger.error(error_msg)
+            state["errors"].append(error_msg)
+            return state
+
+        # Increment retry count
+        state["retry_count"] = retry_count + 1
+
+        # Exponential backoff (simulated with processing delay)
+        import time
+
+        backoff_delay = 2**retry_count
+        logger.info(
+            f"Retrying LLM operation (attempt {retry_count + 1}) "
+            f"with {backoff_delay}s backoff"
+        )
+        time.sleep(min(backoff_delay, 10))  # Cap at 10 seconds
+
+        # Reset current step for retry
+        state["current_step"] = "retrying_llm"
+
+        return state
+
+    except Exception as error:
+        error_msg = f"Error in LLM retry handling: {error}"
         logger.error(error_msg)
         state["errors"].append(error_msg)
         return state
@@ -424,7 +1013,7 @@ def handle_error_node(state: ReimbursementState) -> ReimbursementState:
     return state
 
 
-# Conditional edge functions
+# Conditional edge functions for advanced LLM workflow
 
 
 def _should_continue_after_fetch(state: ReimbursementState) -> str:
@@ -439,23 +1028,208 @@ def _should_continue_after_fetch(state: ReimbursementState) -> str:
     return "continue"
 
 
-def _should_continue_after_process(state: ReimbursementState) -> str:
-    """Determine next step after processing emails."""
+def _should_continue_after_preprocess(state: ReimbursementState) -> str:
+    """Determine next step after preprocessing emails."""
+    if state.get("errors"):
+        return "error"
+
+    emails = state.get("emails", [])
+    if not emails:
+        return "error"  # No emails to process
+
+    return "continue"
+
+
+def _should_continue_after_detection(state: ReimbursementState) -> str:
+    """Determine next step after LLM bill detection."""
+    if state.get("errors"):
+        return "error"
+
+    # Check for LLM-specific errors
+    llm_errors = state.get("llm_errors", [])
+    retry_count = state.get("retry_count", 0)
+
+    if llm_errors and retry_count < 3:
+        return "retry"
+
+    potential_expenses = state.get("emails", [])
+    if not potential_expenses:
+        return "skip"  # No expenses detected, skip to storage
+
+    return "continue"
+
+
+def _should_continue_after_extraction(state: ReimbursementState) -> str:
+    """Determine next step after LLM information extraction."""
+    if state.get("errors"):
+        return "error"
+
+    # Check for extraction errors
+    llm_errors = state.get("llm_errors", [])
+    retry_count = state.get("retry_count", 0)
+
+    if llm_errors and retry_count < 3:
+        return "retry"
+
+    return "continue"
+
+
+def _should_continue_after_confidence(state: ReimbursementState) -> str:
+    """Determine next step after confidence evaluation."""
+    if state.get("errors"):
+        return "error"
+
+    expense_results = state.get("expense_results", [])
+    if not expense_results:
+        return "error"  # No results to validate
+
+    # Check if any results need review
+    needs_review = any(result.get("needs_review", False) for result in expense_results)
+
+    if needs_review:
+        return "review"  # Store with review flags
+
+    return "continue"
+
+
+def _should_continue_after_validation(state: ReimbursementState) -> str:
+    """Determine next step after results validation."""
     if state.get("errors"):
         return "error"
 
     return "continue"
 
 
-def _should_continue_after_extract(state: ReimbursementState) -> str:
-    """Determine next step after extracting data."""
-    if state.get("errors"):
-        return "error"
+def _should_continue_after_retry(state: ReimbursementState) -> str:
+    """Determine which node to retry after LLM failure."""
+    current_step = state.get("current_step", "")
 
-    return "continue"
+    if "detection" in current_step or state.get("retry_count", 0) == 1:
+        return "detection"
+    elif "extraction" in current_step or state.get("retry_count", 0) == 2:
+        return "extraction"
+    else:
+        return "error"  # Too many retries
 
 
-# Helper functions
+# Helper functions for advanced LLM workflow
+
+
+def _fallback_keyword_detection(email: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Fallback keyword-based detection when LLM fails.
+
+    Args:
+        email: Email data dictionary
+
+    Returns:
+        Detection result in LLM format
+    """
+    try:
+        subject = email.get("subject", "").lower()
+        snippet = email.get("snippet", "").lower()
+
+        # Expense keywords
+        expense_keywords = [
+            "receipt",
+            "invoice",
+            "payment",
+            "purchase",
+            "expense",
+            "reimbursement",
+            "bill",
+            "charge",
+            "transaction",
+            "uber",
+            "lyft",
+            "amazon",
+            "hotel",
+            "restaurant",
+            "airline",
+            "travel",
+            "taxi",
+            "parking",
+            "fuel",
+            "office",
+            "supplies",
+            "software",
+            "subscription",
+        ]
+
+        # Check for expense keywords
+        has_expense_keywords = any(
+            keyword in subject or keyword in snippet for keyword in expense_keywords
+        )
+
+        return {
+            "is_reimbursable": has_expense_keywords,
+            "confidence": 60 if has_expense_keywords else 30,
+            "reasoning": "Keyword-based detection fallback",
+            "expense_category": "Other" if has_expense_keywords else None,
+            "detected_amount": None,
+            "vendor": _extract_vendor(email.get("from", "")),
+            "email_id": email.get("id"),
+            "processing_method": "fallback_keyword",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as error:
+        logger.warning(f"Error in fallback detection: {error}")
+        return {
+            "is_reimbursable": False,
+            "confidence": 0,
+            "reasoning": f"Fallback detection error: {error}",
+            "expense_category": None,
+            "detected_amount": None,
+            "vendor": None,
+            "email_id": email.get("id"),
+            "processing_method": "fallback_error",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+
+def _fallback_information_extraction(email: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Fallback information extraction when LLM fails.
+
+    Args:
+        email: Email data dictionary
+
+    Returns:
+        Extraction result in LLM format
+    """
+    try:
+        subject = email.get("subject", "")
+        snippet = email.get("snippet", "")
+        text_content = f"{subject} {snippet}"
+
+        return {
+            "amount": _extract_amount(text_content),
+            "amount_confidence": 40 if _extract_amount(text_content) else 0,
+            "vendor": _extract_vendor(email.get("from", "")),
+            "vendor_confidence": 50 if _extract_vendor(email.get("from", "")) else 0,
+            "category": _detect_category(text_content),
+            "category_confidence": 45 if _detect_category(text_content) else 0,
+            "description": snippet[:200] if snippet else subject[:200],
+            "transaction_date": None,
+            "currency": "USD",
+            "overall_confidence": 35,
+        }
+
+    except Exception as error:
+        logger.warning(f"Error in fallback extraction: {error}")
+        return {
+            "amount": None,
+            "amount_confidence": 0,
+            "vendor": None,
+            "vendor_confidence": 0,
+            "category": "Other",
+            "category_confidence": 0,
+            "description": "Extraction failed",
+            "transaction_date": None,
+            "currency": "USD",
+            "overall_confidence": 0,
+        }
 
 
 def _parse_email_date(date_str: str) -> Optional[datetime]:

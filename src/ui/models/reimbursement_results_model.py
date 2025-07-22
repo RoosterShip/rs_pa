@@ -5,10 +5,11 @@ This module provides a QAbstractTableModel for displaying expense scan results
 in a QTableView with proper sorting, filtering, and custom styling.
 """
 
+import logging
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from PySide6.QtCore import (
     QAbstractTableModel,
@@ -19,10 +20,12 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import QWidget
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ExpenseData:
-    """Data class representing an expense entry from email scan."""
+    """Data class representing an expense entry from email scan with LLM analysis."""
 
     date: datetime
     subject: str
@@ -34,6 +37,14 @@ class ExpenseData:
     description: str = ""
     confidence: float = 0.0  # AI confidence score (0-100)
     email_id: Optional[str] = None
+    # Enhanced LLM analysis fields
+    detection_method: str = "unknown"  # "llm_analysis", "keyword", "fallback"
+    detection_confidence: float = 0.0  # Detection confidence (0-100)
+    extraction_confidence: float = 0.0  # Information extraction confidence
+    reasoning: str = ""  # AI reasoning for decision
+    needs_review: bool = False  # Whether human review is needed
+    validation_status: str = "unknown"  # "PASS", "WARNING", "FAIL"
+    quality_score: float = 0.0  # Overall quality score (0-100)
 
 
 class ReimbursementResultsModel(QAbstractTableModel):
@@ -52,8 +63,11 @@ class ReimbursementResultsModel(QAbstractTableModel):
     COLUMN_AMOUNT = 4
     COLUMN_CATEGORY = 5
     COLUMN_STATUS = 6
+    COLUMN_CONFIDENCE = 7
+    COLUMN_METHOD = 8
+    COLUMN_QUALITY = 9
 
-    COLUMN_COUNT = 7
+    COLUMN_COUNT = 10
 
     COLUMN_HEADERS = [
         "Date",
@@ -63,6 +77,9 @@ class ReimbursementResultsModel(QAbstractTableModel):
         "Amount",
         "Category",
         "Status",
+        "AI Confidence",
+        "Detection Method",
+        "Quality Score",
     ]
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -92,6 +109,13 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 description="Paper, pens, and folders for quarterly reports",
                 confidence=95.2,
                 email_id="msg001",
+                detection_method="llm_analysis",
+                detection_confidence=96.5,
+                extraction_confidence=94.8,
+                reasoning="High confidence - clear receipt with itemized expenses",
+                needs_review=False,
+                validation_status="PASS",
+                quality_score=95.7,
             ),
             ExpenseData(
                 date=datetime.now() - timedelta(days=5),
@@ -104,6 +128,13 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 description="Airport to client meeting - Project Alpha",
                 confidence=92.8,
                 email_id="msg002",
+                detection_method="llm_analysis",
+                detection_confidence=93.2,
+                extraction_confidence=92.4,
+                reasoning="Clear transportation receipt with business purpose",
+                needs_review=False,
+                validation_status="PASS",
+                quality_score=92.8,
             ),
             ExpenseData(
                 date=datetime.now() - timedelta(days=7),
@@ -308,6 +339,14 @@ class ReimbursementResultsModel(QAbstractTableModel):
             return expense.category
         elif column == self.COLUMN_STATUS:
             return self._format_status_with_icon(expense.status)
+        elif column == self.COLUMN_CONFIDENCE:
+            return self._format_confidence(expense.confidence, expense.needs_review)
+        elif column == self.COLUMN_METHOD:
+            return self._format_detection_method(expense.detection_method)
+        elif column == self.COLUMN_QUALITY:
+            return self._format_quality_score(
+                expense.quality_score, expense.validation_status
+            )
 
         return ""
 
@@ -327,6 +366,66 @@ class ReimbursementResultsModel(QAbstractTableModel):
             "Pending Review": "⏳ Pending Review",
         }
         return status_icons.get(status, f"❓ {status}")
+
+    def _format_confidence(self, confidence: float, needs_review: bool) -> str:
+        """
+        Format confidence score with appropriate indicators.
+
+        Args:
+            confidence: Confidence score (0-100)
+            needs_review: Whether item needs human review
+
+        Returns:
+            Formatted confidence string
+        """
+        if needs_review:
+            return f"⚠️ {confidence:.1f}%"
+        elif confidence >= 90:
+            return f"🟢 {confidence:.1f}%"
+        elif confidence >= 75:
+            return f"🟡 {confidence:.1f}%"
+        else:
+            return f"🔴 {confidence:.1f}%"
+
+    def _format_detection_method(self, method: str) -> str:
+        """
+        Format detection method with appropriate icon.
+
+        Args:
+            method: Detection method string
+
+        Returns:
+            Formatted method string
+        """
+        method_icons = {
+            "llm_analysis": "🧠 AI Analysis",
+            "keyword": "🔍 Keyword",
+            "fallback_keyword": "📝 Fallback",
+            "unknown": "❓ Unknown",
+        }
+        return method_icons.get(method, f"❓ {method}")
+
+    def _format_quality_score(self, score: float, validation_status: str) -> str:
+        """
+        Format quality score with validation status.
+
+        Args:
+            score: Quality score (0-100)
+            validation_status: Validation status
+
+        Returns:
+            Formatted quality string
+        """
+        if validation_status == "PASS":
+            icon = "✅"
+        elif validation_status == "WARNING":
+            icon = "⚠️"
+        elif validation_status == "FAIL":
+            icon = "❌"
+        else:
+            icon = "❓"
+
+        return f"{icon} {score:.1f}%"
 
     def _get_background_color(self, expense: ExpenseData) -> QBrush:
         """
@@ -391,23 +490,38 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
     def _get_tooltip(self, expense: ExpenseData) -> str:
         """
-        Get tooltip text for an expense.
+        Get tooltip text for an expense with enhanced LLM analysis details.
 
         Args:
             expense: Expense data
 
         Returns:
-            Tooltip string
+            Tooltip string with comprehensive LLM analysis information
         """
-        return f"""<b>{expense.vendor}</b> - ${expense.amount:.2f}<br/>
+        review_indicator = " ⚠️ NEEDS REVIEW" if expense.needs_review else ""
+
+        return (
+            f"""<b>{expense.vendor}</b> - """
+            f"""${expense.amount:.2f}{review_indicator}<br/>
 <b>Date:</b> {expense.date.strftime('%Y-%m-%d %H:%M')}<br/>
 <b>Category:</b> {expense.category}<br/>
-<b>Status:</b> {expense.status}<br/>
-<b>Confidence:</b> {expense.confidence:.1f}%<br/>
-<b>Email:</b> {expense.subject}<br/>
-<b>From:</b> {expense.sender}<br/><br/>
-<b>Description:</b><br/>
+<b>Status:</b> {expense.status}<br/><br/>
+<b>🧠 AI Analysis:</b><br/>
+<b>• Detection Method:</b> {expense.detection_method}<br/>
+<b>• Detection Confidence:</b> {expense.detection_confidence:.1f}%<br/>
+<b>• Extraction Confidence:</b> {expense.extraction_confidence:.1f}%<br/>
+<b>• Overall Confidence:</b> {expense.confidence:.1f}%<br/>
+<b>• Quality Score:</b> {expense.quality_score:.1f}%<br/>
+<b>• Validation:</b> {expense.validation_status}<br/><br/>
+<b>🎯 AI Reasoning:</b><br/>
+{expense.reasoning if expense.reasoning else 'No reasoning provided'}<br/><br/>
+<b>📧 Email Details:</b><br/>
+<b>Subject:</b> {expense.subject}<br/>
+<b>From:</b> {expense.sender}<br/>
+<b>ID:</b> {expense.email_id}<br/><br/>
+<b>📝 Description:</b><br/>
 {expense.description}"""
+        )
 
     def _get_alignment(self, column: int) -> int:
         """
@@ -421,7 +535,12 @@ class ReimbursementResultsModel(QAbstractTableModel):
         """
         if column == self.COLUMN_AMOUNT:
             return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        elif column == self.COLUMN_STATUS:
+        elif column in [
+            self.COLUMN_STATUS,
+            self.COLUMN_CONFIDENCE,
+            self.COLUMN_METHOD,
+            self.COLUMN_QUALITY,
+        ]:
             return Qt.AlignmentFlag.AlignCenter
         else:
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
@@ -548,3 +667,75 @@ class ReimbursementResultsModel(QAbstractTableModel):
             "pending_count": pending_count,
             "total_count": len(self._expenses),
         }
+
+    def load_llm_results(self, llm_results: List[Dict[str, Any]]) -> None:
+        """
+        Load expense results from LLM analysis.
+
+        Args:
+            llm_results: List of LLM analysis result dictionaries
+        """
+        self.beginResetModel()
+
+        expenses = []
+        for result in llm_results:
+            try:
+                # Parse email date
+                email_date = result.get("email_date")
+                if isinstance(email_date, str):
+                    try:
+                        parsed_date = datetime.fromisoformat(
+                            email_date.replace("Z", "+00:00")
+                        )
+                    except ValueError:
+                        parsed_date = datetime.now()
+                else:
+                    parsed_date = email_date if email_date else datetime.now()
+
+                # Determine status based on LLM analysis
+                status = "Non-Reimbursable"  # Default
+                if result.get("llm_analysis", {}).get("is_reimbursable", False):
+                    confidence = result.get("overall_confidence", 0)
+                    needs_review = result.get("needs_review", False)
+
+                    if needs_review or confidence < 75:
+                        status = "Pending Review"
+                    else:
+                        status = "Reimbursable"
+
+                # Create expense data
+                expense = ExpenseData(
+                    date=parsed_date,
+                    subject=result.get("email_subject", ""),
+                    sender=result.get("email_from", ""),
+                    vendor=result.get("vendor", "Unknown"),
+                    amount=(
+                        float(result.get("amount", 0.0))
+                        if result.get("amount")
+                        else 0.0
+                    ),
+                    category=result.get("category", "Other"),
+                    status=status,
+                    description=result.get("description", ""),
+                    confidence=float(result.get("overall_confidence", 0.0)),
+                    email_id=result.get("gmail_message_id", ""),
+                    # Enhanced LLM analysis fields
+                    detection_method=result.get("detection_method", "unknown"),
+                    detection_confidence=float(result.get("detection_confidence", 0.0)),
+                    extraction_confidence=float(result.get("amount_confidence", 0.0)),
+                    reasoning=result.get("llm_analysis", {}).get("reasoning", ""),
+                    needs_review=result.get("needs_review", False),
+                    validation_status=result.get("validation", {}).get(
+                        "status", "unknown"
+                    ),
+                    quality_score=float(result.get("quality_score", 0.0)),
+                )
+
+                expenses.append(expense)
+
+            except Exception as error:
+                logger.warning(f"Error converting LLM result to ExpenseData: {error}")
+                continue
+
+        self._expenses = expenses
+        self.endResetModel()

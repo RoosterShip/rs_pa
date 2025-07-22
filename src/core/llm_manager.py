@@ -6,11 +6,15 @@ for local LLM inference in the RS Personal Agent.
 """
 
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 
+from langchain_core.messages import BaseMessage
 from langchain_ollama import ChatOllama
 from PySide6.QtCore import QObject, Signal
+
+from .llm_cache import get_llm_cache
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,7 @@ class OllamaManager(QObject):
         self,
         host: str = "localhost",
         port: int = 11434,
-        default_model: str = "llama3.2",
+        default_model: str = "hf.co/unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF:latest",
         parent: Optional[QObject] = None,
     ):
         """
@@ -54,6 +58,14 @@ class OllamaManager(QObject):
         self._is_connected = False
         self._available_models: List[str] = []
         self._current_model: Optional[str] = None
+
+        # Initialize cache
+        self._cache = get_llm_cache()
+
+        # Load configuration from environment
+        self._temperature = float(os.environ.get("RSPA_OLLAMA_TEMPERATURE", "0.7"))
+        self._timeout = float(os.environ.get("RSPA_OLLAMA_TIMEOUT", "120.0"))
+        self._max_retries = int(os.environ.get("RSPA_OLLAMA_MAX_RETRIES", "3"))
 
         # Create client
         self._create_client()
@@ -168,12 +180,12 @@ class OllamaManager(QObject):
         # Return common Ollama model names
         # This is a simplified approach for UI integration
         common_models = [
+            "hf.co/unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF:latest",
+            "deepseek-r1:8b",
             "llama3.2",
             "llama3.2:7b",
-            "llama3.2:13b",
             "llama3.1",
             "mistral",
-            "codellama",
         ]
 
         if self.is_connected():
@@ -378,6 +390,96 @@ class OllamaManager(QObject):
             self.error_occurred.emit(error_msg)
             return None
 
+    def invoke_sync(
+        self,
+        messages: List[BaseMessage],
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        use_cache: bool = True,
+    ) -> str:
+        """
+        Synchronously invoke the LLM with caching support.
+
+        Args:
+            messages: List of LangChain messages
+            model: Model to use (defaults to default_model)
+            temperature: Sampling temperature (defaults to instance temperature)
+            use_cache: Whether to use response caching
+
+        Returns:
+            Generated response text
+
+        Raises:
+            Exception: If LLM invocation fails
+        """
+        if not self.is_connected() or self._chat_ollama is None:
+            raise Exception("Ollama not connected")
+
+        model_to_use = model or self._default_model
+        temperature_to_use = (
+            temperature if temperature is not None else self._temperature
+        )
+
+        # Create cache key from messages
+        prompt_text = "\n".join(
+            str(msg.content) for msg in messages if hasattr(msg, "content")
+        )
+        model_config = {
+            "model": model_to_use,
+            "temperature": temperature_to_use,
+        }
+
+        # Check cache first
+        if use_cache:
+            cached_response = self._cache.get(prompt_text, model_config)
+            if cached_response:
+                logger.debug(f"Cache hit for prompt: {prompt_text[:50]}...")
+                return cached_response
+
+        # Generate response
+        for attempt in range(self._max_retries):
+            try:
+                logger.info(
+                    f"LLM invoke (attempt {attempt + 1}): "
+                    f"model={model_to_use}, temp={temperature_to_use}"
+                )
+
+                # Create ChatOllama with specified parameters
+                chat_model = ChatOllama(
+                    model=model_to_use,
+                    base_url=f"http://{self._host}:{self._port}",
+                    temperature=temperature_to_use,
+                )
+
+                start_time = time.time()
+                response = chat_model.invoke(messages)
+                end_time = time.time()
+
+                response_text = str(response.content)
+
+                logger.info(f"LLM response generated in {end_time - start_time:.2f}s")
+
+                # Cache the response
+                if use_cache and response_text:
+                    self._cache.set(prompt_text, response_text, model_config)
+
+                return response_text
+
+            except Exception as error:
+                logger.warning(f"LLM invoke attempt {attempt + 1} failed: {error}")
+                if attempt == self._max_retries - 1:
+                    raise Exception(
+                        f"LLM invocation failed after {self._max_retries} "
+                        f"attempts: {error}"
+                    )
+
+                # Wait before retry (exponential backoff)
+                wait_time = 2**attempt
+                logger.info(f"Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+
+        raise Exception("Maximum retries exceeded")
+
     def get_model_info(self, model: Optional[str] = None) -> Dict[str, Any]:
         """
         Get information about a specific model.
@@ -439,3 +541,22 @@ class OllamaManager(QObject):
             Current model name or None
         """
         return self._current_model
+
+
+# Global LLM manager instance
+_llm_manager: Optional[OllamaManager] = None
+
+
+def get_llm_manager() -> Optional[OllamaManager]:
+    """Get global LLM manager instance."""
+    global _llm_manager
+
+    if _llm_manager is None:
+        # Load configuration from environment
+        host = os.environ.get("RSPA_OLLAMA_HOST", "localhost")
+        port = int(os.environ.get("RSPA_OLLAMA_PORT", "11434"))
+        default_model = os.environ.get("RSPA_OLLAMA_DEFAULT_MODEL", "hf.co/unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF:latest")
+
+        _llm_manager = OllamaManager(host=host, port=port, default_model=default_model)
+
+    return _llm_manager

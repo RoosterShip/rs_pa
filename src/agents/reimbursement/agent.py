@@ -93,7 +93,7 @@ class ReimbursementAgent(BaseAgent):  # type: ignore[misc]
             gmail_query = input_data.get("gmail_query", "has:attachment")
             max_emails = input_data.get("max_emails", 10)
 
-            # Initialize workflow state
+            # Initialize workflow state with LLM fields
             self._workflow_state = ReimbursementState(
                 gmail_query=gmail_query,
                 max_emails=max_emails,
@@ -102,10 +102,17 @@ class ReimbursementAgent(BaseAgent):  # type: ignore[misc]
                 progress=0,
                 emails=[],
                 processed_emails=0,
+                llm_analyses=[],
+                confidence_threshold=75.0,  # Configurable confidence threshold
+                retry_count=0,
+                high_confidence_count=0,
+                low_confidence_count=0,
                 expense_results=[],
                 expenses_found=0,
                 total_amount=0.0,
                 errors=[],
+                llm_errors=[],
+                processing_times={},
                 scan_id=None,
             )
 
