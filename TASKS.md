@@ -156,22 +156,22 @@ This approach ensures:
 - Task 1.3 completed (database models and mock data)
 
 **Acceptance Criteria**:
-- [ ] Add "Reimbursement Agent" tab to main window's QTabWidget navigation
-- [ ] Create `src/ui/views/reimbursement_view.py` with QWidget-based interface:
+- [x] Add "Reimbursement Agent" tab to main window's QTabWidget navigation
+- [x] Create `src/ui/views/reimbursement_view.py` with QWidget-based interface:
   - QDateEdit widgets for date range selection
   - QPushButton "Scan for Expenses" with proper styling
   - QProgressBar and QLabel for progress indication
   - QTableView for results display with custom model
-- [ ] Create `src/ui/models/reimbursement_results_model.py` for Qt Model-View architecture
-- [ ] Mock scanning results showing in table:
+- [x] Create `src/ui/models/reimbursement_results_model.py` for Qt Model-View architecture
+- [x] Mock scanning results showing in table:
   - Processed email subjects, senders, dates
   - Detected expense amounts and vendor names
   - Row-based coloring for different result types (reimbursable vs non-reimbursable)
-- [ ] Add summary statistics panel with QLabel widgets
-- [ ] Create export functionality using QFileDialog for CSV/PDF selection
-- [ ] Add filtering with QLineEdit and sorting capabilities
-- [ ] Create expense detail dialog using QDialog for individual expense view
-- [ ] All interactions work with mock data and show native desktop feedback
+- [x] Add summary statistics panel with QLabel widgets
+- [x] Create export functionality using QFileDialog for CSV/PDF selection
+- [x] Add filtering with QLineEdit and sorting capabilities
+- [x] Create expense detail dialog using QDialog for individual expense view
+- [x] All interactions work with mock data and show native desktop feedback
 
 **Result**: Professional native desktop reimbursement interface with Qt widgets and proper desktop UX.
 

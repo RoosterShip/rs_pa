@@ -12,10 +12,12 @@ from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
+    QTabWidget,
     QWidget,
 )
 
 from .views.dashboard_view import DashboardView
+from .views.reimbursement_view import ReimbursementView
 
 
 class MainWindow(QMainWindow):
@@ -93,9 +95,18 @@ class MainWindow(QMainWindow):
 
     def _create_central_widget(self) -> None:
         """Create and configure the central widget."""
-        # Create and set the dashboard view as the central widget
+        # Create tab widget as the central widget
+        self._tab_widget = QTabWidget()
+
+        # Create and add dashboard view
         self._dashboard_view = DashboardView()
-        self.setCentralWidget(self._dashboard_view)
+        self._tab_widget.addTab(self._dashboard_view, "Dashboard")
+
+        # Create and add reimbursement agent view
+        self._reimbursement_view = ReimbursementView()
+        self._tab_widget.addTab(self._reimbursement_view, "Reimbursement Agent")
+
+        self.setCentralWidget(self._tab_widget)
 
     def _create_status_bar(self) -> None:
         """Create and configure the status bar."""
@@ -144,6 +155,13 @@ class MainWindow(QMainWindow):
                 self._handle_agent_action
             )
 
+        if hasattr(self, "_reimbursement_view"):
+            # Connect reimbursement view signals
+            self._reimbursement_view.scan_requested.connect(self._handle_scan_request)
+            self._reimbursement_view.export_requested.connect(
+                self._handle_export_request
+            )
+
     def _handle_dashboard_refresh(self) -> None:
         """Handle dashboard refresh request."""
         self.statusBar().showMessage("Dashboard refreshed", 3000)
@@ -167,6 +185,28 @@ class MainWindow(QMainWindow):
         """
         # Update status bar
         message = f"Agent action: {action} on {agent_name}"
+        self.statusBar().showMessage(message, 3000)
+
+    def _handle_scan_request(self, start_date: str, end_date: str) -> None:
+        """
+        Handle reimbursement scan request.
+
+        Args:
+            start_date: Start date for scan
+            end_date: End date for scan
+        """
+        message = f"Scanning emails from {start_date} to {end_date}..."
+        self.statusBar().showMessage(message, 3000)
+
+    def _handle_export_request(self, export_format: str, file_path: str) -> None:
+        """
+        Handle export request.
+
+        Args:
+            export_format: Export format (CSV/PDF)
+            file_path: Target file path
+        """
+        message = f"Exporting to {export_format}: {file_path}"
         self.statusBar().showMessage(message, 3000)
 
     def _show_about_dialog(self) -> None:
