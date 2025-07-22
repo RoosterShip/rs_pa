@@ -26,6 +26,10 @@ google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 google-api-python-client>=2.108.0
 
+# LLM Integration - LangChain Ecosystem
+langgraph>=0.2.0
+langsmith>=0.1.0
+
 # Utilities
 pyyaml>=6.0.1
 click>=8.1.0

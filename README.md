@@ -25,7 +25,9 @@ Create a powerful personal agent that:
 ### 🏗️ Architecture Highlights
 
 - **Agent-Based Design**: Specialized AI agents for different tasks
-- **Modern Tech Stack**: Python, LangChain, PySide6, SQLAlchemy
+- **LangGraph Workflows**: Stateful AI agent orchestration with advanced workflow management
+- **LangSmith Monitoring**: Comprehensive agent debugging and performance monitoring
+- **Modern Tech Stack**: Python, LangGraph, LangSmith, PySide6, SQLAlchemy
 - **Robust Infrastructure**: Database migrations, task scheduling, performance monitoring
 - **Enterprise Patterns**: Clean architecture, dependency injection, comprehensive logging
 
@@ -176,7 +178,41 @@ The application will:
 3. Initialize the database if needed
 4. Open the native desktop dashboard
 
-### 4. Configure Gmail (For Reimbursement Agent)
+### 4. Configure LangSmith (Optional but Recommended)
+
+LangSmith provides powerful monitoring, debugging, and observability for your AI agents.
+
+1. Create a free account at [https://smith.langchain.com/](https://smith.langchain.com/)
+2. Get your API key from the LangSmith dashboard
+3. Set environment variables:
+
+```bash
+# macOS/Linux
+export LANGSMITH_API_KEY="your-api-key-here"
+export LANGSMITH_TRACING=true
+export LANGSMITH_PROJECT="rs-personal-agent"
+
+# Windows
+set LANGSMITH_API_KEY=your-api-key-here
+set LANGSMITH_TRACING=true
+set LANGSMITH_PROJECT=rs-personal-agent
+```
+
+4. **Optional**: Add to your `.env` file for persistence:
+```bash
+LANGSMITH_API_KEY=your-api-key-here
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=rs-personal-agent
+```
+
+**Benefits of LangSmith Integration:**
+- 📊 **Real-time Monitoring**: Track agent execution, performance metrics, and errors
+- 🔍 **Workflow Debugging**: Visualize LangGraph workflow execution with node-level details
+- 📈 **Performance Analytics**: Monitor response times, success rates, and resource usage
+- 🧪 **A/B Testing**: Compare different prompt versions and model configurations
+- 🚨 **Error Tracking**: Automatic error detection and debugging assistance
+
+### 5. Configure Gmail (For Reimbursement Agent)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
@@ -308,12 +344,14 @@ rs_pa/
 
 ## 🤖 Available Agents
 
-### Reimbursement Agent
-- Scans Gmail for unprocessed emails
-- Detects bills and reimbursable expenses using AI
-- Extracts payment and expense information
-- Generates comprehensive reimbursement reports
-- Marks emails as processed with appropriate labels
+### Reimbursement Agent (LangGraph-Powered)
+- **Sophisticated Workflows**: Multi-step LangGraph workflows for intelligent email processing
+- **State Management**: Persistent workflow state for long-running operations
+- **AI-Powered Detection**: Advanced LLM analysis for bill and expense detection
+- **Confidence Scoring**: Intelligent routing based on AI confidence levels
+- **Error Handling**: Built-in retry logic and fallback mechanisms
+- **Real-time Monitoring**: LangSmith integration for workflow observability
+- **Batch Processing**: Parallel email processing with resumable operations
 
 ## 📖 Documentation
 
@@ -574,7 +612,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **[LangChain](https://langchain.com/)** - LLM orchestration framework
+- **[LangGraph](https://www.langchain.com/langgraph)** - Stateful AI agent workflow orchestration
+- **[LangSmith](https://www.langchain.com/langsmith)** - AI agent monitoring and debugging platform
+- **[LangChain](https://langchain.com/)** - LLM ecosystem and integrations
 - **[Ollama](https://ollama.ai/)** - Local LLM runtime
 - **[PySide6](https://doc.qt.io/qtforpython/)** - Native desktop UI framework
 - **[SQLAlchemy](https://sqlalchemy.org/)** - Database ORM

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .dialogs.settings_dialog import SettingsDialog
 from .views.dashboard_view import DashboardView
 from .views.reimbursement_view import ReimbursementView
 
@@ -168,12 +169,38 @@ class MainWindow(QMainWindow):
 
     def _handle_settings_request(self) -> None:
         """Handle settings request."""
-        QMessageBox.information(
-            self,
-            "Settings",
-            "Settings dialog will be implemented in a future version.\n\n"
-            "This is a placeholder for the settings interface.",
-        )
+        try:
+            settings_dialog = SettingsDialog(self)
+
+            # Connect settings dialog signals
+            settings_dialog.settings_changed.connect(self._handle_settings_changed)
+            settings_dialog.gmail_authenticated.connect(
+                self._handle_gmail_authenticated
+            )
+            settings_dialog.ollama_connected.connect(self._handle_ollama_connected)
+
+            # Show dialog
+            settings_dialog.exec()
+
+        except Exception as error:
+            QMessageBox.critical(
+                self, "Settings Error", f"Failed to open settings dialog: {error}"
+            )
+
+    def _handle_settings_changed(self) -> None:
+        """Handle settings changes."""
+        self.statusBar().showMessage("Settings updated", 3000)
+        # Refresh dashboard to reflect new settings
+        if hasattr(self, "_dashboard_view"):
+            self._dashboard_view.refresh_dashboard()
+
+    def _handle_gmail_authenticated(self) -> None:
+        """Handle Gmail authentication success."""
+        self.statusBar().showMessage("Gmail authenticated successfully", 3000)
+
+    def _handle_ollama_connected(self) -> None:
+        """Handle Ollama connection success."""
+        self.statusBar().showMessage("Ollama connected successfully", 3000)
 
     def _handle_agent_action(self, agent_name: str, action: str) -> None:
         """

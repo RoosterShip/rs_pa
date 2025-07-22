@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document details the agent architecture and development guidelines for the RS Personal Assistant system. Agents are autonomous AI-powered components that perform specific tasks using LangChain and LangGraph patterns.
+This document details the agent architecture and development guidelines for the RS Personal Assistant system. Agents are autonomous AI-powered components that perform specific tasks using LangGraph for stateful workflow orchestration and LangSmith for monitoring and debugging.
 
 ## 🤖 Agent Architecture
 
@@ -10,15 +10,21 @@ This document details the agent architecture and development guidelines for the 
 
 All agents inherit from a common base class that provides standardized interfaces, lifecycle management, and integration with the core system.
 
-**Base Agent Class (`src/agents/base_agent.py`)**
+**LangGraph-Based Base Agent Class (`src/agents/base_agent.py`)**
 ```python
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TypedDict
 from dataclasses import dataclass
 from datetime import datetime
 import logging
 import json
 import uuid
+import os
+
+from langgraph import StateGraph, END
+from langchain_core.runnables import RunnableConfig
+from langsmith import trace
+from langsmith.wrappers import wrap_openai
 
 from src.core.database import DatabaseManager
 from src.core.llm_manager import LLMManager
@@ -39,6 +45,17 @@ class AgentResult:
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
+
+class BaseAgentState(TypedDict):
+    """Base state schema for LangGraph workflows"""
+    task_id: str
+    input_data: Dict[str, Any]
+    current_step: str
+    progress: float
+    error: Optional[str]
+    result_data: Dict[str, Any]
+    execution_metadata: Dict[str, Any]
+    langsmith_run_id: Optional[str]
 
 class BaseAgent(ABC):
     """Abstract base class for all agents"""
@@ -68,6 +85,13 @@ class BaseAgent(ABC):
         self.last_execution = None
         self.execution_count = 0
         
+        # LangGraph workflow components
+        self.workflow = None
+        self.compiled_workflow = None
+        
+        # LangSmith configuration
+        self._configure_langsmith()
+        
         # Initialize agent
         self._initialize()
     
@@ -76,6 +100,9 @@ class BaseAgent(ABC):
         try:
             self.validate_config()
             self.setup_resources()
+            self.workflow = self.build_workflow()
+            if self.workflow:
+                self.compiled_workflow = self.workflow.compile()
             self.status = AgentStatus.IDLE
             self.logger.info(f"Agent {self.name} initialized successfully")
         except Exception as e:
@@ -83,9 +110,21 @@ class BaseAgent(ABC):
             self.logger.error(f"Agent {self.name} initialization failed: {e}")
             raise
     
+    def _configure_langsmith(self):
+        """Configure LangSmith monitoring"""
+        # Configure LangSmith if API key is available
+        if os.getenv('LANGSMITH_API_KEY'):
+            os.environ['LANGSMITH_TRACING'] = 'true'
+            os.environ['LANGSMITH_PROJECT'] = f'rs-pa-{self.__class__.__name__.lower()}'
+    
+    @abstractmethod
+    def build_workflow(self) -> Optional[StateGraph]:
+        """Build the LangGraph workflow for this agent"""
+        pass
+    
     @abstractmethod
     def execute_task(self, input_data: Dict[str, Any]) -> AgentResult:
-        """Execute the main agent task"""
+        """Execute the main agent task (can use LangGraph workflow)"""
         pass
     
     @abstractmethod
@@ -152,8 +191,9 @@ class BaseAgent(ABC):
                 task.error_message = result.error
                 task.completed_at = datetime.now()
     
+    @trace(name="agent_execution")
     def run(self, input_data: Dict[str, Any]) -> AgentResult:
-        """Main entry point for agent execution"""
+        """Main entry point for agent execution with LangSmith tracing"""
         start_time = datetime.now()
         task_id = self.create_task_record(input_data)
         
@@ -161,8 +201,11 @@ class BaseAgent(ABC):
             self.status = AgentStatus.ACTIVE
             self.logger.info(f"Starting execution for agent {self.name}")
             
-            # Execute the agent task
-            result = self.execute_task(input_data)
+            # Execute using LangGraph workflow if available, otherwise fallback to execute_task
+            if self.compiled_workflow:
+                result = self.run_workflow(input_data, task_id)
+            else:
+                result = self.execute_task(input_data)
             
             # Update execution tracking
             self.last_execution = start_time
@@ -196,6 +239,57 @@ class BaseAgent(ABC):
             
             self.update_task_record(task_id, error_result)
             return error_result
+    
+    def run_workflow(self, input_data: Dict[str, Any], task_id: str) -> AgentResult:
+        """Execute LangGraph workflow with state management"""
+        # Initialize workflow state
+        initial_state = BaseAgentState(
+            task_id=task_id,
+            input_data=input_data,
+            current_step="start",
+            progress=0.0,
+            error=None,
+            result_data={},
+            execution_metadata={
+                "start_time": datetime.now().isoformat(),
+                "agent_name": self.name,
+                "agent_version": self.version
+            },
+            langsmith_run_id=None
+        )
+        
+        # Configure RunnableConfig for LangSmith
+        config = RunnableConfig(
+            metadata={
+                "agent_id": self.agent_id,
+                "agent_name": self.name,
+                "task_id": task_id
+            }
+        )
+        
+        try:
+            # Execute the workflow
+            final_state = self.compiled_workflow.invoke(initial_state, config=config)
+            
+            # Convert workflow state to AgentResult
+            return AgentResult(
+                success=final_state.get("error") is None,
+                data=final_state.get("result_data", {}),
+                message=f"Workflow completed at step: {final_state.get('current_step', 'unknown')}",
+                execution_time_ms=0,  # Will be set by run() method
+                error=final_state.get("error"),
+                metadata=final_state.get("execution_metadata", {})
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Workflow execution failed: {e}")
+            return AgentResult(
+                success=False,
+                data={},
+                message="Workflow execution failed",
+                execution_time_ms=0,
+                error=str(e)
+            )
 ```
 
 ---

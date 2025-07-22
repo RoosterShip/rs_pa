@@ -23,11 +23,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...core.gmail_service import GmailService
+from ...core.llm_manager import OllamaManager
 from ..models.agent_table_model import (
     AgentTableModel,
     ServiceStatus,
 )
-from ..widgets.status_indicator_widget import StatusIndicatorWidget
+from ..widgets.connection_status_widget import ConnectionStatusWidget
 
 
 class DashboardView(QWidget):
@@ -52,9 +54,16 @@ class DashboardView(QWidget):
         """
         super().__init__(parent)
 
+        # Initialize services
+        self._gmail_service = GmailService(self)
+        self._ollama_manager = OllamaManager(parent=self)
+
         self._setup_ui()
         self._setup_connections()
         self._setup_refresh_timer()
+
+        # Start initial status checks
+        self._check_service_status()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -141,17 +150,10 @@ class DashboardView(QWidget):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(30)
 
-        # Create status indicators
-        self._ollama_status = StatusIndicatorWidget(
-            "Ollama", ServiceStatus.DISCONNECTED
-        )
-        self._gmail_status = StatusIndicatorWidget(
-            "Gmail",
-            ServiceStatus.DISCONNECTED,
-        )
-        self._database_status = StatusIndicatorWidget(
-            "Database", ServiceStatus.CONNECTED
-        )
+        # Create connection status indicators
+        self._ollama_status = ConnectionStatusWidget("Ollama", "disconnected")
+        self._gmail_status = ConnectionStatusWidget("Gmail", "disconnected")
+        self._database_status = ConnectionStatusWidget("Database", "connected")
 
         layout.addWidget(self._ollama_status)
         layout.addWidget(self._gmail_status)
@@ -246,13 +248,23 @@ class DashboardView(QWidget):
         table = self._agent_table
         table.doubleClicked.connect(self._handle_agent_double_click)
 
-        # Status indicator connections
-        ollama = self._ollama_status
-        ollama.status_changed.connect(self._handle_status_change)
-        gmail = self._gmail_status
-        gmail.status_changed.connect(self._handle_status_change)
-        database = self._database_status
-        database.status_changed.connect(self._handle_status_change)
+        # Service connections
+        self._gmail_service.connection_status_changed.connect(self._update_gmail_status)
+        self._gmail_service.error_occurred.connect(self._show_service_error)
+
+        self._ollama_manager.connection_status_changed.connect(
+            self._update_ollama_status
+        )
+        self._ollama_manager.error_occurred.connect(self._show_service_error)
+
+        # Status widget connections
+        self._ollama_status.status_changed.connect(
+            self._handle_connection_status_change
+        )
+        self._gmail_status.status_changed.connect(self._handle_connection_status_change)
+        self._database_status.status_changed.connect(
+            self._handle_connection_status_change
+        )
 
     def _setup_refresh_timer(self) -> None:
         """Set up automatic refresh timer."""
@@ -332,7 +344,7 @@ class DashboardView(QWidget):
         """Handle refresh button click."""
         self._agent_model.refresh_data()
         self._update_system_info()
-        self._simulate_status_checks()
+        self._check_service_status()
         self.refresh_requested.emit()
 
         # Show feedback
@@ -442,22 +454,22 @@ class DashboardView(QWidget):
                 self._agent_model.update_agent_status(row, ServiceStatus.IDLE)
                 break
 
-    def _handle_status_change(
-        self, service_name: str, new_status: ServiceStatus
+    def _handle_connection_status_change(
+        self, service_name: str, new_status: str
     ) -> None:
         """
-        Handle system status change.
+        Handle connection status change.
 
         Args:
             service_name: Name of the service
-            new_status: New status
+            new_status: New status string
         """
-        print(f"Service '{service_name}' status changed to {new_status.value}")
+        print(f"Service '{service_name}' status changed to {new_status}")
 
     def _auto_refresh(self) -> None:
         """Perform automatic refresh."""
         self._update_system_info()
-        self._simulate_status_checks()
+        self._check_service_status()
 
     def _update_system_info(self) -> None:
         """Update system information display."""
@@ -473,20 +485,54 @@ class DashboardView(QWidget):
         self._agent_count_label.setText(f"Agents: {total_agents}")
         self._running_count_label.setText(f"Running: {running_count}")
 
-    def _simulate_status_checks(self) -> None:
-        """Simulate checking system status."""
-        import random
+    def _check_service_status(self) -> None:
+        """Check real service connection status."""
+        # Check Gmail status in a non-blocking way
+        QTimer.singleShot(100, self._async_check_gmail_status)
 
-        # Randomly update service statuses for demonstration
-        services = [self._ollama_status, self._gmail_status]
+        # Check Ollama status in a non-blocking way
+        QTimer.singleShot(200, self._async_check_ollama_status)
 
-        for service in services:
-            if random.random() < 0.2:  # 20% chance of status change
-                current_status = service.get_status()
-                if current_status == ServiceStatus.CONNECTED:
-                    service.set_status(ServiceStatus.DISCONNECTED)
+    def _async_check_gmail_status(self) -> None:
+        """Asynchronously check Gmail status."""
+        if self._gmail_service.is_connected():
+            self._gmail_status.set_status("connected")
+        else:
+            # Try to load existing credentials without triggering OAuth
+            from pathlib import Path
+
+            creds_path = Path.cwd() / "credentials.json"
+            if creds_path.exists():
+                self._gmail_service.set_credentials_file(str(creds_path))
+                if self._gmail_service.get_connection_status() == "error":
+                    self._gmail_status.set_status("error")
                 else:
-                    service.set_status(ServiceStatus.CONNECTED)
+                    self._gmail_status.set_status("disconnected")
+            else:
+                self._gmail_status.set_status("disconnected")
+
+    def _async_check_ollama_status(self) -> None:
+        """Asynchronously check Ollama status."""
+        # Test connection without blocking UI
+        try:
+            if self._ollama_manager.test_connection():
+                self._ollama_status.set_status("connected")
+            else:
+                self._ollama_status.set_status("disconnected")
+        except Exception:
+            self._ollama_status.set_status("error")
+
+    def _update_gmail_status(self, status: str) -> None:
+        """Update Gmail status indicator."""
+        self._gmail_status.set_status(status)
+
+    def _update_ollama_status(self, status: str) -> None:
+        """Update Ollama status indicator."""
+        self._ollama_status.set_status(status)
+
+    def _show_service_error(self, error_msg: str) -> None:
+        """Show service error message."""
+        print(f"Service error: {error_msg}")
 
     def _apply_styling(self) -> None:
         """Apply custom styling to the dashboard."""
@@ -606,3 +652,11 @@ class DashboardView(QWidget):
     def refresh_dashboard(self) -> None:
         """Refresh the entire dashboard."""
         self._handle_refresh()
+
+    def get_gmail_service(self) -> GmailService:
+        """Get the Gmail service instance."""
+        return self._gmail_service
+
+    def get_ollama_manager(self) -> OllamaManager:
+        """Get the Ollama manager instance."""
+        return self._ollama_manager

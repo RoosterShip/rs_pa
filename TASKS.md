@@ -195,113 +195,152 @@ This approach ensures:
 - Task 2.1 completed (reimbursement agent native UI)
 
 **Acceptance Criteria**:
-- [ ] Add Gmail API and Ollama dependencies to requirements (google-auth, google-api-python-client, ollama)
-- [ ] Create `src/core/gmail_service.py` with OAuth2 desktop flow setup
-- [ ] Create `src/core/llm_manager.py` with Ollama HTTP API connection using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`
-- [ ] Update dashboard header status indicators using Qt widgets:
+- [x] Add Gmail API and Ollama dependencies to requirements (google-auth, google-api-python-client, ollama)
+- [x] Create `src/core/gmail_service.py` with OAuth2 desktop flow setup
+- [x] Create `src/core/llm_manager.py` with Ollama HTTP API connection using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`
+- [x] Update dashboard header status indicators using Qt widgets:
   - Gmail: QLabel with colored status dot (Connected/Disconnected/Error)
-  - Ollama: QLabel with colored status dot (Connected/Disconnected/Error)
+  - Ollama: QLabel with colored status dot (Connected/Disconnected/Error)  
   - Real-time status updates using QTimer
-- [ ] Create native settings dialog `src/ui/dialogs/settings_dialog.py`:
+- [x] Create native settings dialog `src/ui/dialogs/settings_dialog.py`:
   - Gmail OAuth2 authentication with native browser flow
   - Ollama server configuration using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`, `RSPA_OLLAMA_DEFAULT_MODEL`
   - Security credential encryption using `RSPA_SECURITY_CREDENTIAL_ENCRYPTION`, `RSPA_SECURITY_CREDENTIAL_KEY_ROTATION_DAYS`
   - QPushButton "Test Connection" buttons with feedback
   - QProgressBar for connection testing
-- [ ] Update agent table model to show real "Reimbursement Agent" status from database
-- [ ] Add native error handling with QMessageBox for user feedback
-- [ ] Implement connection health checks with background QTimer
+- [x] Update agent table model to show real "Reimbursement Agent" status from database
+- [x] Add native error handling with QMessageBox for user feedback
+- [x] Implement connection health checks with background QTimer
 
 **Result**: Native desktop application shows real service connection statuses with proper Qt-based configuration interface.
 
-**Files to Create**:
+**Files Created**:
 - `src/core/gmail_service.py` (Gmail API service with desktop OAuth2)
-- `src/core/llm_manager.py` (Ollama HTTP client)
+- `src/core/llm_manager.py` (Ollama HTTP client)  
 - `src/ui/dialogs/settings_dialog.py` (Native settings QDialog)
 - `src/ui/widgets/connection_status_widget.py` (Custom status indicator)
 - Enhanced `src/ui/views/dashboard_view.py` with real status indicators
+- Enhanced `src/ui/main_window.py` with real settings dialog integration
+- Updated `requirements.txt` with ollama>=0.3.0 dependency
 
 ---
 
-### Task 2.3: Simple Reimbursement Agent Implementation
+### Task 2.3: LangGraph-Based Reimbursement Agent Implementation
 **Priority**: P0  
-**Component**: Agent Integration  
-**Estimated Time**: 7 hours
+**Component**: Agent Integration with LangGraph  
+**Estimated Time**: 8 hours
 
-**Description**: Create a basic working reimbursement agent that can fetch and process emails with real-time native UI feedback.
+**Description**: Create a stateful LangGraph-based reimbursement agent that can fetch and process emails with real-time native UI feedback and integrated LangSmith monitoring.
 
 **Pre-requisites**:
 - Task 2.2 completed (Gmail and Ollama connections with native UI)
 
 **Acceptance Criteria**:
-- [ ] Create `src/agents/__init__.py` and `src/agents/base_agent.py` abstract base class
-- [ ] Implement basic `src/agents/reimbursement/agent.py` with:
-  - Fetch recent emails from Gmail API
-  - Simple text-based reimbursable expense detection using keyword matching
-  - Basic data extraction (amount, vendor, date, expense category)
+- [ ] Add LangGraph and LangSmith dependencies to requirements (`langgraph>=0.2.0`, `langsmith>=0.1.0`)
+- [ ] Create `src/agents/__init__.py` and `src/agents/base_agent.py` abstract base class using LangGraph StateGraph
+- [ ] Implement LangGraph-based `src/agents/reimbursement/agent.py` with:
+  - StateGraph with nodes for email fetching, processing, and result storage
+  - Email fetching node that retrieves recent emails from Gmail API
+  - Processing node with simple text-based expense detection using keyword matching
+  - Data extraction node (amount, vendor, date, expense category)
+  - State management for agent workflow with persistent state storage
   - Save results to database with proper SQLAlchemy models
+- [ ] Create `src/agents/reimbursement/graph.py` defining the LangGraph workflow:
+  - Define agent state schema with typed state variables
+  - Create workflow nodes (fetch_emails, process_emails, extract_data, store_results)
+  - Configure conditional edges based on processing results
+  - Implement error handling and retry logic within the graph
 - [ ] Create `src/agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
-- [ ] Create `src/core/agent_manager.py` for agent lifecycle management
-- [ ] Connect reimbursement native UI to real agent:
-  - "Scan for Expenses" QPushButton triggers actual Gmail scanning
+- [ ] Create `src/core/agent_manager.py` for LangGraph agent lifecycle management:
+  - Integration with LangSmith for tracing and monitoring
+  - Environment variables for LangSmith (`LANGSMITH_API_KEY`, `LANGSMITH_TRACING=true`)
+  - Agent state persistence and recovery
+- [ ] Connect reimbursement native UI to LangGraph agent:
+  - "Scan for Expenses" QPushButton triggers actual LangGraph workflow
   - QProgressBar shows real scanning progress with Qt signals
   - QTableView displays real Gmail results via model updates
   - Save and retrieve scan history from database
-- [ ] Add agent state management (running, idle, error) with Qt signals for UI updates
+- [ ] Add LangGraph state management (running, idle, error) with Qt signals for UI updates
 - [ ] Implement native error handling with QMessageBox dialogs
 - [ ] Add agent status updates to dashboard table in real-time
+- [ ] Configure LangSmith integration for workflow monitoring and debugging
 
-**Result**: Working reimbursement agent that processes real Gmail emails with native desktop UI feedback and database persistence.
+**Result**: Working LangGraph-based reimbursement agent that processes real Gmail emails with stateful workflow management, native desktop UI feedback, database persistence, and LangSmith monitoring.
 
 **Files to Create**:
 - `src/agents/__init__.py`
-- `src/agents/base_agent.py` (Abstract base with Qt signal support)
+- `src/agents/base_agent.py` (Abstract base with LangGraph StateGraph integration)
 - `src/agents/reimbursement/__init__.py`
-- `src/agents/reimbursement/agent.py` (Gmail processing agent)
+- `src/agents/reimbursement/agent.py` (LangGraph-based Gmail processing agent)
+- `src/agents/reimbursement/graph.py` (LangGraph workflow definition)
 - `src/agents/reimbursement/models.py` (SQLAlchemy models for reimbursement data)
-- `src/core/agent_manager.py` (Agent lifecycle with Qt integration)
+- `src/core/agent_manager.py` (LangGraph agent lifecycle with LangSmith integration)
 - Enhanced database models in `src/models/` for reimbursement scan results
 
 ---
 
 ## 🧠 Phase 3: LLM Integration & Advanced Native Features (P0)
 
-### Task 3.1: Advanced Email Scanner with LLM Bill Detection
+### Task 3.1: Advanced LangGraph Email Scanner with LLM Bill Detection
 **Priority**: P0  
-**Component**: Agent Enhancement  
-**Estimated Time**: 7 hours
+**Component**: Agent Enhancement with Advanced LangGraph Workflows  
+**Estimated Time**: 8 hours
 
-**Description**: Replace keyword-based bill detection with AI-powered analysis using Ollama, with native desktop progress feedback.
+**Description**: Replace keyword-based bill detection with AI-powered analysis using Ollama integrated into a sophisticated LangGraph workflow, with native desktop progress feedback and LangSmith monitoring.
 
 **Pre-requisites**:
-- Task 2.3 completed (basic email scanner with native UI)
+- Task 2.3 completed (LangGraph-based reimbursement agent with native UI)
 
 **Acceptance Criteria**:
-- [ ] Enhance `src/agents/email_scanner/agent.py` with Ollama LLM integration
-- [ ] Create `src/agents/email_scanner/prompts.py` with structured prompts for:
+- [ ] Enhance `src/agents/reimbursement/graph.py` with advanced LangGraph workflow nodes:
+  - Email preprocessing node (clean, normalize, extract text)
+  - LLM analysis node with Ollama integration
+  - Confidence evaluation node for AI decisions
+  - Result validation and post-processing node
+  - Error handling and retry nodes with exponential backoff
+- [ ] Create `src/agents/reimbursement/prompts.py` with structured prompts for:
   - Bill detection classification (yes/no with reasoning)
   - Information extraction (amount, vendor, date, category, confidence)
   - Prompt templates optimized for Llama 4 model using `RSPA_OLLAMA_DEFAULT_MODEL`
+  - Multi-shot prompting examples for better accuracy
 - [ ] Configure LLM settings using `RSPA_OLLAMA_TEMPERATURE`, `RSPA_OLLAMA_TIMEOUT`, `RSPA_OLLAMA_MAX_RETRIES`
-- [ ] Add confidence scoring for AI decisions with visual indicators in Qt table
-- [ ] Implement structured JSON output parsing from LLM responses
-- [ ] Add email type detection and specialized prompt routing
-- [ ] Create fallback mechanisms for LLM failures (network, parsing errors)
+- [ ] Implement advanced LangGraph state management:
+  - Typed state schema with email processing status tracking
+  - Conditional routing based on confidence scores
+  - State persistence for long-running email processing workflows
+  - Parallel processing capabilities for batch operations
+- [ ] Add confidence scoring and decision logic within LangGraph nodes:
+  - Confidence threshold routing (high/medium/low confidence paths)
+  - Human-in-the-loop integration for low-confidence decisions
+  - Visual indicators in Qt table with color-coded confidence levels
+- [ ] Implement structured JSON output parsing from LLM responses with validation
+- [ ] Add email type detection and specialized prompt routing within the graph
+- [ ] Create fallback mechanisms for LLM failures integrated into LangGraph:
+  - Network error handling nodes
+  - Parsing error recovery workflows
+  - Graceful degradation to keyword-based detection
 - [ ] Implement `src/core/llm_cache.py` for response caching using `RSPA_CACHE_ENABLE_LLM_CACHE`, `RSPA_CACHE_LLM_CACHE_TTL_HOURS`, `RSPA_CACHE_LLM_CACHE_MAX_SIZE_MB`
+- [ ] Enhanced LangSmith integration for advanced workflow monitoring:
+  - Detailed node-level tracing and performance metrics
+  - Error tracking and debugging capabilities
+  - A/B testing support for different prompt versions
 - [ ] Update native UI to show:
+  - LangGraph workflow progress with node-level status updates
   - Confidence scores with color-coded QProgressBar widgets
-  - AI reasoning in email detail dialog
-  - LLM processing status in real-time via Qt signals
-- [ ] Add LLM performance metrics to dashboard status panel
+  - AI reasoning and decision paths in email detail dialog
+  - Real-time LangGraph execution status via Qt signals
+- [ ] Add comprehensive LLM and workflow performance metrics to dashboard status panel
 
-**Result**: Email scanner uses local AI for intelligent bill detection with native desktop feedback and much higher accuracy.
+**Result**: Advanced LangGraph-based email scanner with sophisticated AI workflow management, intelligent bill detection, native desktop feedback, and comprehensive LangSmith monitoring for much higher accuracy and reliability.
 
 **Files to Create/Update**:
-- `src/agents/email_scanner/prompts.py` (Llama 4 optimized prompts)
-- Enhanced `src/agents/email_scanner/agent.py` (LLM integration)
+- Enhanced `src/agents/reimbursement/graph.py` (Advanced LangGraph workflow)
+- `src/agents/reimbursement/prompts.py` (Llama 4 optimized prompts)
+- Enhanced `src/agents/reimbursement/agent.py` (Advanced LangGraph integration)
 - `src/core/llm_cache.py` (Response caching system)
-- Enhanced `src/ui/models/email_results_model.py` (confidence display)
-- Enhanced `src/ui/dialogs/email_detail_dialog.py` (AI reasoning display)
+- Enhanced `src/ui/models/email_results_model.py` (confidence and workflow status display)
+- Enhanced `src/ui/dialogs/email_detail_dialog.py` (AI reasoning and workflow visualization)
+- `src/agents/reimbursement/state.py` (Advanced state schema definitions)
 
 ---
 
@@ -345,53 +384,74 @@ This approach ensures:
 
 ---
 
-### Task 3.3: Advanced Email Scanner Features with Native UI
+### Task 3.3: Advanced LangGraph Agent Features with Native UI
 **Priority**: P0  
-**Component**: Feature Enhancement  
-**Estimated Time**: 7 hours
+**Component**: Feature Enhancement with LangGraph Workflows  
+**Estimated Time**: 9 hours
 
-**Description**: Add advanced features like scheduling, batch processing, and reporting with native desktop interfaces.
+**Description**: Add advanced features like scheduling, batch processing, and reporting with LangGraph-powered workflows and native desktop interfaces.
 
 **Pre-requisites**:
 - Task 3.2 completed (enhanced native dashboard with monitoring)
 
 **Acceptance Criteria**:
-- [ ] Add scheduled scanning functionality with native Qt scheduling UI:
+- [ ] Add scheduled scanning functionality with LangGraph workflow integration:
   - Daily/weekly/monthly schedule options using QDateTimeEdit
-  - Background task execution with QThread and worker objects
+  - LangGraph workflow for scheduled task execution with state persistence
+  - Background task execution with QThread and LangGraph worker objects
   - Schedule management dialog with QTableView for schedule list
-  - System tray notifications for scheduled scans
-- [ ] Implement batch processing for large email volumes:
-  - Progress tracking with QProgressDialog
-  - Cancellable operations with proper thread management
+  - System tray notifications for scheduled scans with LangGraph status
+- [ ] Implement LangGraph-powered batch processing for large email volumes:
+  - Batch processing workflow with parallel email processing nodes
+  - Progress tracking with QProgressDialog showing per-node progress
+  - Cancellable operations with proper LangGraph workflow termination
   - Batch size configuration with QSpinBox controls
-- [ ] Create comprehensive reporting features with native dialogs:
+  - State checkpointing for resumable batch operations
+- [ ] Create comprehensive reporting features with LangGraph analytics workflows:
   - Monthly/yearly expense summaries with Qt charts
   - Category breakdowns using QTreeView widgets
   - Vendor analysis with sortable QTableView
   - Export to multiple formats using QFileDialog (CSV, PDF)
-- [ ] Add email scanning history with native search:
+  - LangGraph workflow for report generation and data aggregation
+- [ ] Add email scanning history with native search and LangGraph query processing:
   - QTableView with searchable/filterable history
   - Date range filtering with QDateEdit widgets
   - Full-text search using QLineEdit with live filtering
-- [ ] Implement Gmail label management:
+  - LangGraph-powered semantic search capabilities
+- [ ] Implement Gmail label management with LangGraph automation:
   - Auto-labeling configuration with QComboBox
   - Label creation and management through Gmail API
-- [ ] Create expense categorization with native category management:
+  - LangGraph workflow for intelligent label assignment
+  - Rule-based auto-categorization with AI-powered suggestions
+- [ ] Create expense categorization with LangGraph-enhanced category management:
   - Category editor dialog with QListWidget
   - Drag-and-drop category assignment
-  - Rule-based auto-categorization setup
+  - LangGraph workflow for automatic expense categorization
+  - AI-powered category suggestions and rule learning
+- [ ] Enhanced LangSmith monitoring for all advanced workflows:
+  - Detailed tracing for scheduled, batch, and reporting workflows
+  - Performance analytics for different workflow types
+  - Error tracking and automated recovery suggestions
+- [ ] Add workflow template system for custom LangGraph agents:
+  - Template library for common agent workflows
+  - Visual workflow designer integration
+  - Export/import capabilities for workflow configurations
 
-**Result**: Production-ready email scanner with enterprise-level features and professional native desktop interface.
+**Result**: Production-ready LangGraph-powered agent system with enterprise-level features, intelligent automation, and professional native desktop interface.
 
 **Files to Create**:
-- `src/core/task_scheduler.py` (Background scheduling with Qt integration)
-- `src/agents/email_scanner/reports.py` (Report generation backend)
+- `src/core/task_scheduler.py` (LangGraph-powered scheduling with Qt integration)
+- `src/agents/reimbursement/workflows/` (Directory for specialized workflows)
+- `src/agents/reimbursement/workflows/batch_processing.py` (LangGraph batch workflow)
+- `src/agents/reimbursement/workflows/scheduled_scan.py` (LangGraph scheduled workflow)
+- `src/agents/reimbursement/workflows/report_generation.py` (LangGraph reporting workflow)
+- `src/agents/reimbursement/reports.py` (Report generation backend)
 - `src/ui/dialogs/schedule_manager_dialog.py` (Native scheduling interface)
 - `src/ui/dialogs/report_generator_dialog.py` (Native reporting interface)
 - `src/ui/dialogs/category_manager_dialog.py` (Expense categorization)
-- `src/ui/widgets/batch_progress_widget.py` (Batch processing progress)
-- Enhanced email scanner view with advanced features tabs
+- `src/ui/widgets/batch_progress_widget.py` (Batch processing progress with workflow status)
+- `src/ui/widgets/workflow_designer_widget.py` (Visual workflow designer)
+- Enhanced reimbursement view with advanced LangGraph features tabs
 
 ---
 
@@ -776,18 +836,38 @@ This approach ensures:
 
 ## 🔮 Phase 7: Future Enhancements (P2-P3)
 
-### Task 7.1: Advanced Agent Types (P2)
+### Task 7.1: Advanced LangGraph Agent Types (P2)
 **Priority**: P2  
 **Estimated Time**: 20 hours each
 
-**Description**: Implement additional agent types for expanded functionality.
+**Description**: Implement additional LangGraph-based agent types for expanded functionality with sophisticated workflow management and LangSmith monitoring.
 
-**Agent Ideas**:
-- [ ] **Calendar Manager**: Schedule management and conflict detection
-- [ ] **Document Processor**: PDF/document analysis and organization
-- [ ] **Financial Tracker**: Expense tracking and budget analysis
-- [ ] **Social Media Monitor**: Track mentions and updates
-- [ ] **Task Manager**: Automated task creation and management
+**LangGraph Agent Ideas**:
+- [ ] **Calendar Manager Agent**: LangGraph workflow for schedule management and conflict detection
+  - Multi-calendar integration workflow with conditional routing
+  - Intelligent conflict resolution with user preference learning
+  - Meeting optimization and scheduling suggestions
+  - LangSmith monitoring for calendar API performance
+- [ ] **Document Processor Agent**: LangGraph workflow for PDF/document analysis and organization
+  - Multi-stage document processing pipeline (OCR, analysis, categorization)
+  - Parallel processing workflows for large document batches
+  - AI-powered content extraction and summarization
+  - Document relationship mapping and intelligent filing
+- [ ] **Financial Tracker Agent**: LangGraph workflow for expense tracking and budget analysis
+  - Multi-source financial data aggregation workflows
+  - Intelligent expense categorization and anomaly detection
+  - Budget forecasting and recommendation workflows
+  - Integration with banking APIs and financial services
+- [ ] **Social Media Monitor Agent**: LangGraph workflow for tracking mentions and updates
+  - Multi-platform monitoring with parallel data collection
+  - Sentiment analysis and trend detection workflows
+  - Automated response suggestion and engagement optimization
+  - Brand reputation monitoring and alert systems
+- [ ] **Task Manager Agent**: LangGraph workflow for automated task creation and management
+  - Intelligent task prioritization and scheduling workflows
+  - Context-aware task creation from emails and documents
+  - Dependency tracking and workflow orchestration
+  - Integration with project management tools
 
 ### Task 7.2: Advanced Native Desktop UI Features (P2)
 **Priority**: P2  

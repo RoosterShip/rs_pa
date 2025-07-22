@@ -71,7 +71,9 @@ This ensures that at any point in development, there's a functional application 
 - **PySide6** - Native desktop UI framework (Qt6 bindings)
 - **SQLAlchemy + Alembic** - Database ORM and migrations  
 - **Ollama** - Local LLM runtime (using Llama 4 models, default: `llama4:maverick`)
-- **LangChain** - LLM orchestration framework
+- **LangChain & ChatOllama** - LLM integration using langchain-ollama for standardized AI model interaction
+- **LangGraph** - Stateful LLM agent orchestration framework with workflow management (ready for Task 2.3)
+- **LangSmith** - Agent monitoring, debugging, and observability platform (ready for Task 2.3)
 - **Gmail API** - For reimbursement agent
 
 ## Build and Development Commands
@@ -116,6 +118,17 @@ ollama pull llama4:maverick
 # Alternative Llama 4 models:
 # ollama pull llama4:scout    # 17B params, 16 experts, 10M context
 # ollama pull llama4:behemoth # 288B params (when available)
+
+# LangSmith Setup (Optional but recommended for monitoring)
+# 1. Create account at https://smith.langchain.com/
+# 2. Get API key from LangSmith dashboard
+# 3. Set environment variables:
+export LANGSMITH_API_KEY="your-api-key-here"
+export LANGSMITH_TRACING=true
+export LANGSMITH_PROJECT="rs-personal-agent"
+
+# Install LangGraph and LangSmith dependencies (included in requirements.txt)
+uv pip install langgraph>=0.2.0 langsmith>=0.1.0
 ```
 
 ## Architecture Overview
