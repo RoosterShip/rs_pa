@@ -1,33 +1,34 @@
 # Environment Variables Configuration
 
-This document lists all environment variables used in the RS Personal Assistant project, organized by configuration group. The system uses **hierarchical settings** with pydantic-settings for type-safe configuration management.
+This document lists all environment variables used in the RS Personal Agent project, organized by configuration group. The system uses **hierarchical settings** with pydantic-settings for type-safe configuration management.
 
 ## Configuration Groups Overview
 
 Environment variables are organized into logical groups with the `RSPA_` prefix followed by the group name:
 
 - **Application**: `RSPA_APP_*` - Core application settings
-- **Database**: `RSPA_DATABASE_*` - Database configuration and connection pooling
+- **Database**: `RSPA_DATABASE_*` - SQLite database configuration (no connection pooling needed)
 - **Ollama**: `RSPA_OLLAMA_*` - LLM service configuration
 - **Logging**: `RSPA_LOGGING_*` - Logging system configuration
 - **Security**: `RSPA_SECURITY_*` - Security and credential management
-- **Agents**: `RSPA_AGENTS_*` - Agent system configuration
 - **Cache**: `RSPA_CACHE_*` - Caching system configuration
 - **UI**: `RSPA_UI_*` - User interface settings
 
 ---
 
-## 🚀 Application Settings
+## 🚀 Application Settings (Phase 1: Task 1.1)
 
 ### `RSPA_APP_NAME`
-**Default**: `RS Personal Assistant`  
+**Default**: `RS Personal Agent`  
 **Type**: String  
-**Purpose**: Application name displayed in UI and logs.
+**Purpose**: Application name displayed in UI and logs.  
+**First Used**: Task 1.1 - Basic PySide6 window setup
 
 ### `RSPA_APP_VERSION`
 **Default**: `0.1.0`  
 **Type**: String (semantic version)  
-**Purpose**: Application version string.
+**Purpose**: Application version string.  
+**First Used**: Task 1.1 - Basic PySide6 window setup
 
 ### `RSPA_DEBUG`
 **Default**: `false`  
@@ -54,16 +55,23 @@ pytest tests/  # Runs all tests including integration tests
 
 ---
 
-## 🗄️ Database Settings
+## 🗄️ Database Settings (Phase 1: Task 1.3)
 
 ### `RSPA_DATABASE_URL`
-**Default**: Auto-computed based on dev_mode  
+**Default**: Auto-computed based on dev_mode and Qt standard paths  
 **Type**: String (SQLAlchemy connection URL)  
 **Purpose**: Override the default database connection string.
 
+**Default Locations**:
+- **Development Mode** (`RSPA_DATABASE_DEV_MODE=true`): `sqlite:///./data/main.db`
+- **Production Mode** (uses Qt AppLocalDataLocation):
+  - **Windows**: `sqlite:///%LOCALAPPDATA%\Roostership\RSPersonalAgent\main.db`
+  - **macOS**: `sqlite:///~/Library/Application Support/RSPersonalAgent/main.db`
+  - **Linux**: `sqlite:///~/.local/share/RSPersonalAgent/main.db`
+
 **Usage**:
 ```bash
-# SQLite (default behavior)
+# Custom SQLite path
 export RSPA_DATABASE_URL="sqlite:///path/to/custom.db"
 
 # PostgreSQL for production
@@ -72,6 +80,8 @@ export RSPA_DATABASE_URL="postgresql://user:password@localhost/rspa"
 # MySQL example
 export RSPA_DATABASE_URL="mysql://user:password@localhost/rspa"
 ```
+
+**Note**: Qt standard paths are automatically determined at runtime and require proper QApplication setup with organization name "Roostership" and application name "RSPersonalAgent".
 
 ### `RSPA_DATABASE_DEV_MODE`
 **Default**: `false`  
@@ -84,9 +94,12 @@ export RSPA_DATABASE_DEV_MODE=true
 ```
 
 **Effects**:
-- Database stored in `./data/main.db` instead of `~/.rs/pa/main.db`
-- Enables additional database debugging
-- Uses project directory for all data storage
+- Database stored in `./data/main.db` instead of Qt standard paths
+- Enables additional database debugging  
+- Uses project directory for all data storage instead of:
+  - **Windows**: `%LOCALAPPDATA%\Roostership\RSPersonalAgent\`
+  - **macOS**: `~/Library/Application Support/RSPersonalAgent/`
+  - **Linux**: `~/.local/share/RSPersonalAgent/`
 
 ### `RSPA_DATABASE_BACKUP_COUNT`
 **Default**: `5`  
@@ -98,24 +111,11 @@ export RSPA_DATABASE_DEV_MODE=true
 **Type**: Boolean  
 **Purpose**: Create database backup before running migrations.
 
-### `RSPA_DATABASE_POOL_SIZE`
-**Default**: `5`  
-**Type**: Integer (1-20)  
-**Purpose**: Database connection pool size.
-
-### `RSPA_DATABASE_MAX_OVERFLOW`
-**Default**: `10`  
-**Type**: Integer (0-50)  
-**Purpose**: Maximum database connection overflow.
-
-### `RSPA_DATABASE_POOL_TIMEOUT`
-**Default**: `30`  
-**Type**: Integer (5-300)  
-**Purpose**: Database connection pool timeout in seconds.
+**Note**: Connection pool settings (POOL_SIZE, MAX_OVERFLOW, POOL_TIMEOUT) are not applicable to SQLite and have been removed from the configuration. SQLite uses file-based access with internal locking mechanisms instead of connection pools.
 
 ---
 
-## 🤖 Ollama LLM Settings
+## 🤖 Ollama LLM Settings (Phase 2: Task 2.2, Enhanced Phase 3: Task 3.1)
 
 ### `RSPA_OLLAMA_HOST`
 **Default**: `localhost`  
@@ -146,8 +146,9 @@ export RSPA_OLLAMA_HOST=ollama-container
 
 **Usage**:
 ```bash
-export RSPA_OLLAMA_DEFAULT_MODEL=llama4:latest
-export RSPA_OLLAMA_DEFAULT_MODEL=mistral:7b
+export RSPA_OLLAMA_DEFAULT_MODEL=llama4:maverick  # General use, 17B params, 128 experts
+export RSPA_OLLAMA_DEFAULT_MODEL=llama4:scout     # Large context, 10M tokens, 16 experts
+export RSPA_OLLAMA_DEFAULT_MODEL=llama4:behemoth  # Most powerful (when available)
 ```
 
 **Validation**: Must be in `model:tag` format.
@@ -179,7 +180,7 @@ export RSPA_OLLAMA_DEFAULT_MODEL=mistral:7b
 
 ---
 
-## 📋 Logging Settings
+## 📋 Logging Settings (Phase 1+: Throughout Implementation)
 
 ### `RSPA_LOGGING_LEVEL`
 **Default**: `INFO`  
@@ -198,39 +199,22 @@ export RSPA_LOGGING_LEVEL=ERROR   # Minimal logging
 **Type**: Boolean  
 **Purpose**: Enable logging to rotating log files.
 
-### `RSPA_LOGGING_LOG_FILE_MAX_SIZE`
-**Default**: `10485760` (10MB)  
-**Type**: Integer (bytes)  
-**Purpose**: Maximum log file size before rotation.
-
-### `RSPA_LOGGING_LOG_FILE_BACKUP_COUNT`
-**Default**: `5`  
-**Type**: Integer (1-50)  
-**Purpose**: Number of log file backups to retain.
 
 ### `RSPA_LOGGING_LOG_TO_CONSOLE`
 **Default**: `true`  
 **Type**: Boolean  
 **Purpose**: Enable console logging output.
 
-### `RSPA_LOGGING_COLORED_CONSOLE`
-**Default**: `true`  
-**Type**: Boolean  
-**Purpose**: Enable colored console output.
 
 ### `RSPA_LOGGING_LOG_TO_DATABASE`
 **Default**: `true`  
 **Type**: Boolean  
 **Purpose**: Store logs in database for UI log viewer.
 
-### `RSPA_LOGGING_DATABASE_LOG_RETENTION_DAYS`
-**Default**: `30`  
-**Type**: Integer (1-365)  
-**Purpose**: Days to retain logs in database.
 
 ---
 
-## 🔒 Security Settings
+## 🔒 Security Settings (Phase 2: Task 2.2 - OAuth/Credentials)
 
 ### `RSPA_SECURITY_CREDENTIAL_ENCRYPTION`
 **Default**: `true`  
@@ -242,77 +226,19 @@ export RSPA_LOGGING_LEVEL=ERROR   # Minimal logging
 **Type**: Integer (1-365)  
 **Purpose**: Days between credential key rotations.
 
-### `RSPA_SECURITY_TOKEN_EXPIRATION_HOURS`
-**Default**: `24`  
-**Type**: Integer (1-168)  
-**Purpose**: OAuth token expiration time in hours.
+**Note**: `RSPA_SECURITY_TOKEN_EXPIRATION_HOURS` has been removed as OAuth token expiration is managed by service providers (Gmail, etc.) and cannot be configured locally.
 
 ### `RSPA_SECURITY_ENABLE_AUDIT_LOGGING`
 **Default**: `true`  
 **Type**: Boolean  
 **Purpose**: Enable security audit logging.
 
-### `RSPA_SECURITY_MAX_FAILED_ATTEMPTS`
-**Default**: `5`  
-**Type**: Integer (1-50)  
-**Purpose**: Maximum failed authentication attempts.
-
-### `RSPA_SECURITY_LOCKOUT_DURATION_MINUTES`
-**Default**: `15`  
-**Type**: Integer (1-1440)  
-**Purpose**: Account lockout duration in minutes.
+**Note**: `RSPA_SECURITY_MAX_FAILED_ATTEMPTS` and `RSPA_SECURITY_LOCKOUT_DURATION_MINUTES` have been removed as they are not applicable to a standalone desktop application with no authentication system.
 
 ---
 
-## 🤖 Agent System Settings
 
-### `RSPA_AGENTS_MAX_CONCURRENT_TASKS`
-**Default**: `3`  
-**Type**: Integer (1-20)  
-**Purpose**: Maximum concurrent agent tasks.
-
-### `RSPA_AGENTS_MAX_EXECUTION_TIME_MINUTES`
-**Default**: `30`  
-**Type**: Integer (1-1440)  
-**Purpose**: Maximum agent execution time in minutes.
-
-### `RSPA_AGENTS_MAX_RETRIES`
-**Default**: `3`  
-**Type**: Integer (0-10)  
-**Purpose**: Maximum retry attempts for failed agent tasks.
-
-### `RSPA_AGENTS_RETRY_BACKOFF_SECONDS`
-**Default**: `5`  
-**Type**: Integer (1-300)  
-**Purpose**: Backoff time between retries in seconds.
-
-### `RSPA_AGENTS_HEALTH_CHECK_ENABLED`
-**Default**: `true`  
-**Type**: Boolean  
-**Purpose**: Enable agent health monitoring.
-
-### `RSPA_AGENTS_PERFORMANCE_MONITORING`
-**Default**: `true`  
-**Type**: Boolean  
-**Purpose**: Enable agent performance monitoring.
-
-### `RSPA_AGENTS_ENABLED_AGENTS`
-**Default**: `["reimbursement"]`  
-**Type**: JSON array of strings  
-**Purpose**: List of enabled agent types.
-
-**Usage**:
-```bash
-# Enable multiple agents
-export RSPA_AGENTS_ENABLED_AGENTS='["reimbursement", "task_manager", "calendar"]'
-
-# Enable all agents
-export RSPA_AGENTS_ENABLED_AGENTS='["reimbursement", "task_manager", "calendar", "document_processor"]'
-```
-
----
-
-## 💾 Cache Settings
+## 💾 Cache Settings (Phase 3: Task 3.1 - LLM Response Caching)
 
 ### `RSPA_CACHE_ENABLE_LLM_CACHE`
 **Default**: `true`  
@@ -341,42 +267,44 @@ export RSPA_AGENTS_ENABLED_AGENTS='["reimbursement", "task_manager", "calendar",
 
 ---
 
-## 🎨 UI Settings
+## 🎨 Native Desktop UI Settings (Phase 4: Task 4.1 - Advanced Styling)
 
-### `RSPA_UI_HOST`
-**Default**: `localhost`  
-**Type**: String  
-**Purpose**: Streamlit server host address.
-
-### `RSPA_UI_PORT`
-**Default**: `8501`  
-**Type**: Integer (1024-65535)  
-**Purpose**: Streamlit server port.
+### `RSPA_UI_WINDOW_WIDTH`
+**Default**: `1200`  
+**Type**: Integer (800-3840)  
+**Purpose**: Default main window width in pixels.
 
 **Usage**:
 ```bash
-export RSPA_UI_PORT=8502  # Use alternate port
+export RSPA_UI_WINDOW_WIDTH=1400  # Larger initial window
 ```
+
+### `RSPA_UI_WINDOW_HEIGHT`
+**Default**: `800`  
+**Type**: Integer (600-2160)  
+**Purpose**: Default main window height in pixels.
 
 ### `RSPA_UI_THEME`
 **Default**: `auto`  
 **Type**: String (auto/light/dark)  
-**Purpose**: UI theme selection.
+**Purpose**: Native desktop theme selection (follows OS theme when auto).
 
 ### `RSPA_UI_PAGE_TITLE`
-**Default**: `RS Personal Assistant`  
+**Default**: `RS Personal Agent`  
 **Type**: String  
-**Purpose**: Browser page title.
+**Purpose**: Main application window title.
 
-### `RSPA_UI_SHOW_PERFORMANCE_METRICS`
+
+### `RSPA_UI_MINIMIZE_TO_TRAY`
 **Default**: `true`  
 **Type**: Boolean  
-**Purpose**: Display performance metrics in UI.
+**Purpose**: Enable minimizing application to system tray.
 
-### `RSPA_UI_AUTO_REFRESH_INTERVAL`
-**Default**: `30`  
-**Type**: Integer (5-300)  
-**Purpose**: Auto-refresh interval in seconds.
+
+### `RSPA_UI_FONT_SIZE`
+**Default**: `10`  
+**Type**: Integer (8-18)  
+**Purpose**: Base application font size in points.
 
 ---
 
@@ -402,7 +330,7 @@ The Gmail API requires OAuth2 authentication. Environment variables are not used
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "OAuth client ID"
    - Choose "Desktop app" as the application type
-   - Name it "RS Personal Assistant"
+   - Name it "RS Personal Agent"
    - Download the credentials as `credentials.json`
 
 4. **Install Credentials**:

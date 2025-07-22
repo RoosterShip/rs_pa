@@ -1,6 +1,6 @@
-# RS Personal Assistant (rs_pa)
+# RS Personal Agent (rs_pa)
 
-🤖 **A Privacy-First, Local AI-Powered Personal Assistant Platform**
+🤖 **A Privacy-First, Local AI-Powered Personal Agent Platform**
 
 <div align="center">
 
@@ -12,11 +12,11 @@
 
 ## 📋 Project Overview
 
-RS Personal Assistant (rs_pa) is an innovative, modular AI platform designed to automate personal productivity tasks while maintaining complete privacy. Unlike cloud-based assistants, all AI processing happens locally on your machine using Ollama and the Llama 4 Maverick model.
+RS Personal Agent (rs_pa) is an innovative, modular AI platform designed to automate personal productivity tasks while maintaining complete privacy. Unlike cloud-based assistants, all AI processing happens locally on your machine using Ollama and Meta's Llama 4 models.
 
 ### 🎯 Vision
 
-Create a powerful personal assistant that:
+Create a powerful personal agent that:
 - **Respects Privacy**: 100% local AI processing, no data leaves your machine
 - **Adapts to You**: Extensible agent system that grows with your needs
 - **Works Everywhere**: Cross-platform standalone application
@@ -25,14 +25,14 @@ Create a powerful personal assistant that:
 ### 🏗️ Architecture Highlights
 
 - **Agent-Based Design**: Specialized AI agents for different tasks
-- **Modern Tech Stack**: Python, LangChain, Streamlit, SQLAlchemy
+- **Modern Tech Stack**: Python, LangChain, PySide6, SQLAlchemy
 - **Robust Infrastructure**: Database migrations, task scheduling, performance monitoring
 - **Enterprise Patterns**: Clean architecture, dependency injection, comprehensive logging
 
 ### 📊 Project Status
 
 **Current Phase**: Design & Planning  
-**Estimated Completion**: 196 hours across 7 phases  
+**Estimated Completion**: 210 hours across 7 phases  
 **Documentation**: Complete system design available
 
 See [TASKS.md](TASKS.md) for detailed implementation roadmap.
@@ -46,23 +46,23 @@ See [TASKS.md](TASKS.md) for detailed implementation roadmap.
 - **Secure Credentials**: OAuth2 for external services, local credential management
 
 ### 🤖 Intelligent Agents
-- **Email Scanner**: Automatically processes emails, detects bills, extracts reimbursements
+- **Reimbursement Agent**: Automatically processes emails, detects bills, extracts reimbursement data
 - **Extensible Framework**: Easy to add custom agents for your specific needs
 - **Smart Scheduling**: Agents run on customizable schedules
 - **Performance Tracking**: Monitor agent efficiency and resource usage
 
 ### 💻 User Experience  
-- **Modern Dashboard**: Clean, intuitive interface built with Streamlit
+- **Modern Dashboard**: Clean, intuitive native desktop interface built with PySide6
 - **Real-time Monitoring**: Live agent status, task progress, and system health
 - **Dark/Light Themes**: Comfortable viewing in any environment
-- **Responsive Design**: Works on desktop and tablet screens
+- **Native Desktop**: Cross-platform native application with OS integration
 
 ### 🛠️ Technical Excellence
 - **Robust Architecture**: Clean code, SOLID principles, comprehensive testing
 - **Database Migrations**: Version-controlled schema changes with Alembic
 - **Performance Optimized**: Efficient caching, connection pooling, async operations
 - **Cross-Platform**: Runs on Windows, macOS, and Linux
-- **Standalone Packaging**: Single executable distribution with PyInstaller
+- **Standalone Packaging**: Single executable distribution with PyInstaller/Nuitka
 
 ## 📦 System Requirements
 
@@ -126,14 +126,18 @@ Download and install from [https://ollama.ai/](https://ollama.ai/)
 ### 2. Install Llama 4 Model
 
 ```bash
-# Pull Llama 4 Maverick (recommended for best performance)
+# Pull Llama 4 Maverick (recommended for general use)
 ollama pull llama4:maverick
+
+# Alternative Llama 4 models:
+# ollama pull llama4:scout    # 17B params, 16 experts, 10M context window
+# ollama pull llama4:behemoth # 288B params (when available)
 
 # Verify installation
 ollama list
 ```
 
-### 3. Set Up RS Personal Assistant
+### 3. Set Up RS Personal Agent
 
 ```bash
 # Clone the repository
@@ -162,17 +166,17 @@ set RSPA_DEV_MODE=true     # Windows
 # Initialize database (automatic on first run)
 python -m alembic upgrade head
 
-# Run the application
-streamlit run main.py
+# Run the native desktop application
+python main.py
 ```
 
 The application will:
 1. Automatically check Ollama installation
-2. Verify the Llama 4 Maverick model
+2. Verify the Llama 4 model availability
 3. Initialize the database if needed
-4. Open the dashboard at http://localhost:8501
+4. Open the native desktop dashboard
 
-### 4. Configure Gmail (For Email Scanner Agent)
+### 4. Configure Gmail (For Reimbursement Agent)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
@@ -188,14 +192,16 @@ rs_pa/
 ├── main.py                     # Application entry point
 ├── agents/                     # Agent implementations
 │   ├── base_agent.py          # Abstract base agent
-│   └── email_scanner/         # Email scanning agent
+│   └── reimbursement/         # Reimbursement agent
 ├── core/                      # Core infrastructure
 │   ├── database.py            # SQLAlchemy models & session
 │   ├── llm_manager.py         # Ollama integration
 │   └── agent_manager.py       # Agent lifecycle management
-├── ui/                        # Streamlit dashboard
-│   ├── dashboard.py           # Main UI
-│   └── components/            # Reusable UI components
+├── ui/                        # PySide6 native desktop UI
+│   ├── main_window.py         # Main desktop window
+│   ├── views/                 # UI view components
+│   ├── models/                # Qt data models
+│   └── widgets/               # Custom Qt widgets
 ├── models/                    # SQLAlchemy database models
 ├── alembic/                   # Database migrations
 └── config/                    # Configuration files
@@ -203,12 +209,12 @@ rs_pa/
 
 ## 🤖 Available Agents
 
-### Email Scanner Agent
+### Reimbursement Agent
 - Scans Gmail for unprocessed emails
-- Detects bills using AI
-- Extracts payment information
-- Generates reimbursement reports
-- Marks emails as processed
+- Detects bills and reimbursable expenses using AI
+- Extracts payment and expense information
+- Generates comprehensive reimbursement reports
+- Marks emails as processed with appropriate labels
 
 ## 📖 Documentation
 
@@ -253,21 +259,21 @@ source .venv/bin/activate  # macOS/Linux
 # or
 .venv\Scripts\activate     # Windows
 
-# Install PyInstaller
-uv pip install pyinstaller
+# Install PyInstaller and Nuitka
+uv pip install pyinstaller nuitka
 
 # Create standalone executable
 python scripts/build_standalone.py
 
 # Output locations:
-# Windows: dist/RS_Personal_Assistant/RS_Personal_Assistant.exe
-# macOS: dist/RS_Personal_Assistant/RS_Personal_Assistant.app
-# Linux: dist/RS_Personal_Assistant/RS_Personal_Assistant
+# Windows: dist/RS_Personal_Agent/RS_Personal_Agent.exe
+# macOS: dist/RS_Personal_Agent/RS_Personal_Agent.app
+# Linux: dist/RS_Personal_Agent/RS_Personal_Agent
 ```
 
 The standalone package includes:
 - All Python dependencies
-- Streamlit web server
+- PySide6 Qt runtime
 - Database migrations
 - Configuration templates
 - **Note**: Ollama must be installed separately
@@ -297,8 +303,8 @@ docker stop rs_pa
 ### Package Structure
 
 ```
-dist/RS_Personal_Assistant/
-├── RS_Personal_Assistant[.exe/.app]  # Main executable
+dist/RS_Personal_Agent/
+├── RS_Personal_Agent[.exe/.app]  # Main executable
 ├── _internal/                         # Dependencies
 ├── config/                            # Configuration templates
 │   ├── settings.yaml
@@ -354,10 +360,17 @@ du -sh ~/.ollama/models/
 alembic current
 
 # Reset database (WARNING: Deletes all data!)
+# Note: Database location depends on platform and mode:
+# Development: ./data/main.db
+# Production Windows: %LOCALAPPDATA%\Roostership\RSPersonalAgent\main.db
+# Production macOS: ~/Library/Application Support/RSPersonalAgent/main.db
+# Production Linux: ~/.local/share/RSPersonalAgent/main.db
+
+# For development mode reset:
 rm -rf data/main.db data/cache.db data/performance.db
 alembic upgrade head
 
-# Create backup before reset
+# Create backup before reset (development mode):
 cp data/main.db data/main.db.backup
 ```
 
@@ -368,14 +381,14 @@ cp data/main.db data/main.db.backup
 
 #### UI Not Loading
 ```bash
-# Check Streamlit is installed
-uv pip show streamlit
+# Check PySide6 is installed
+uv pip show PySide6
 
-# Try different port
-streamlit run main.py --server.port 8502
+# Try running with debug output
+python main.py --debug
 
-# Clear Streamlit cache
-streamlit cache clear
+# Check Qt platform plugins
+python -c "from PySide6.QtWidgets import QApplication; print('Qt works')"
 ```
 
 ### Debug Mode
@@ -391,7 +404,11 @@ python main.py --debug
 
 ### Getting Help
 
-1. Check logs in `~/.rs/pa/logs/rs_pa.log`
+1. Check logs in platform-specific location:
+   - **Development**: `./data/logs/rs_pa.log`
+   - **Windows**: `%LOCALAPPDATA%\Roostership\RSPersonalAgent\logs\rs_pa.log`
+   - **macOS**: `~/Library/Application Support/RSPersonalAgent/logs/rs_pa.log`
+   - **Linux**: `~/.local/share/RSPersonalAgent/logs/rs_pa.log`
 2. Run built-in diagnostics: `python -m rs_pa.diagnostics`
 3. Visit [Issues](https://github.com/your-repo/issues)
 
@@ -460,7 +477,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **[LangChain](https://langchain.com/)** - LLM orchestration framework
 - **[Ollama](https://ollama.ai/)** - Local LLM runtime
-- **[Streamlit](https://streamlit.io/)** - Web UI framework
+- **[PySide6](https://doc.qt.io/qtforpython/)** - Native desktop UI framework
 - **[SQLAlchemy](https://sqlalchemy.org/)** - Database ORM
 - **[UV](https://github.com/astral-sh/uv)** - Fast Python package manager
 
@@ -471,5 +488,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-Made with ❤️ by the RS Personal Assistant Team
+Made with ❤️ by the RS Personal Agent Team
 </div>

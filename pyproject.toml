@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0.0", "wheel>=0.42.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rs-personal-assistant"
+name = "rs-personal-agent"
 version = "0.1.0"
-description = "A privacy-first, local AI-powered personal assistant platform"
+description = "A privacy-first, local AI-powered personal agent platform"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "RS Personal Assistant Team"},
+    {name = "RS Personal Agent Team"},
 ]
 keywords = [
     "ai", "assistant", "personal", "privacy", "local", "llm", "ollama", "agent"
@@ -35,7 +35,9 @@ dependencies = [
     "alembic>=1.13.0",
     "langchain>=0.1.0",
     "langchain-ollama>=0.1.0",
-    "streamlit>=1.28.0",
+    "PySide6>=6.9.1",
+    "PySide6-Essentials>=6.9.1", 
+    "PySide6-Addons>=6.9.1",
     "aiosqlite>=0.19.0",
     "structlog>=23.2.0",
     "cryptography>=41.0.0",
@@ -47,6 +49,7 @@ dependencies = [
     "click>=8.1.0",
     "python-multipart>=0.0.6",
     "psutil>=5.9.0",
+    "appdirs>=1.4.4",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +59,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
     "pytest-xdist>=3.0.0",
+    "pytest-qt>=4.4.0",
     "factory-boy>=3.3.0",
     "faker>=19.0.0",
     "freezegun>=1.2.0",
@@ -66,6 +70,9 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.7.0",
     "pre-commit>=3.5.0",
+    "PySide6-stubs>=6.9.1",
+    "qt6-tools>=6.7.0",
+    "pillow>=10.0.0",
 ]
 
 docs = [
@@ -75,7 +82,8 @@ docs = [
 ]
 
 build = [
-    "pyinstaller>=6.0.0",
+    "pyinstaller>=6.14.0",
+    "nuitka>=2.4.8", 
     "wheel>=0.42.0",
     "twine>=4.0.0",
 ]
@@ -87,7 +95,10 @@ Documentation = "https://roostership.github.io/rs_pa"
 Issues = "https://github.com/roostership/rs_pa/issues"
 
 [project.scripts]
-rs-pa = "rs_pa.main:main"
+rs-pa = "main:main"
+
+[project.gui-scripts]
+rs-pa-gui = "main:main"
 
 # Black configuration
 [tool.black]

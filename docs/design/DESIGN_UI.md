@@ -1,2534 +1,1506 @@
-# UI Design - RS Personal Assistant Agent Admin Panel
+# UI Design - RS Personal Agent
 
 ## 📋 Overview
 
-This document details the user interface design and implementation guidelines for the RS Personal Assistant Agent Admin Panel. The UI provides a modern, sleek interface for managing AI agents, monitoring their status, viewing outputs, and analyzing performance metrics in real-time using Python's CustomTkinter framework.
+This document details the user interface design and implementation guidelines for the RS Personal Agent. The UI provides a modern, native desktop interface for managing AI agents, monitoring their status, viewing outputs, and analyzing performance metrics in real-time using **PySide6 6.9.1** (Qt6 Python bindings) for professional cross-platform desktop functionality.
 
 ## 🎨 Design Philosophy
 
 ### Visual Language
-- **Modern & Clean**: Minimalist design with rounded corners and smooth transitions
-- **Dark/Light Theme Support**: System-adaptive theming with manual override
+- **Native Desktop Feel**: Professional Qt-based interface with OS-appropriate styling
+- **Dark/Light Theme Support**: System-adaptive theming with manual override capability
 - **High Contrast**: Clear visual hierarchy with proper spacing and typography
-- **Responsive Layout**: Adapts to different screen sizes and resolutions
-- **Real-time Updates**: Live data visualization without flickering or lag
+- **Responsive Layout**: Adapts to different screen sizes and window states
+- **Real-time Updates**: Live data visualization using Qt Model-View architecture
 
 ### User Experience Principles
-1. **Intuitive Navigation**: Clear visual cues and logical grouping
-2. **Minimal Clicks**: Common actions accessible within 2 clicks
-3. **Visual Feedback**: Immediate response to user interactions
-4. **Progressive Disclosure**: Advanced features hidden by default
-5. **Consistency**: Uniform interaction patterns across all components
+1. **Intuitive Navigation**: Clear visual cues and logical grouping with Qt layouts
+2. **Minimal Clicks**: Common actions accessible within 2 clicks via Qt widgets
+3. **Visual Feedback**: Immediate response to user interactions with Qt signals/slots
+4. **Progressive Disclosure**: Advanced features accessed through expandable sections
+5. **Consistency**: Uniform interaction patterns across all Qt components
+6. **Keyboard Navigation**: Full keyboard accessibility with Qt shortcuts
 
 ## 🏗️ Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Main Application Window                  │
+│                Qt Main Application Window                   │
+│                    (QMainWindow)                            │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌──────────┐  ┌─────────────────────────────────────────┐  │
 │  │          │  │                                         │  │
-│  │   Side   │  │           Main Content Area             │  │
-│  │   Panel  │  │                                         │  │
-│  │          │  │  ┌─────────────┐  ┌──────────────────┐  │  │
-│  │ - Agents │  │  │   Agent     │  │     Timeline     │  │  │
-│  │ - Stats  │  │  │   Cards     │  │     View         │  │  │
-│  │ - Config │  │  └─────────────┘  └──────────────────┘  │  │
+│  │   Side   │  │        Main Content Area                │  │
+│  │   Panel  │  │         (QStackedWidget)                │  │
+│  │          │  │                                         │  │
+│  │ - Agents │  │  ┌─────────────┐  ┌──────────────────┐  │  │
+│  │ - Stats  │  │  │   Agent     │  │     Timeline     │  │  │
+│  │ - Config │  │  │   Cards     │  │     View         │  │  │
+│  │          │  │  │ (QTableView)│  │  (Custom Widget) │  │  │
+│  │          │  │  └─────────────┘  └──────────────────┘  │  │
 │  │          │  │                                         │  │
 │  │          │  │  ┌────────────────────────────────────┐ │  │
-│  │          │  │  │        Output/Logs Panel           │ │  │
+│  │          │  │  │     Log Viewer (QTextBrowser)      │ │  │
 │  │          │  │  └────────────────────────────────────┘ │  │
 │  └──────────┘  └─────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
-│                      Status Bar                             │
+│                   Status Bar (QStatusBar)                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🧩 Component Library
+## 🧩 PySide6 Component Library
 
-### Base Components
+### Base Application Architecture
 
-#### 1. Theme Manager (`ui/components/theme_manager.py`)
+#### 1. Main Application Window (`ui/main_window.py`)
 ```python
-import customtkinter as ctk
-from typing import Dict, Any, Callable, List
-import json
-from pathlib import Path
+from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
+                             QHBoxLayout, QStackedWidget, QMenuBar, 
+                             QStatusBar, QToolBar)
+from PySide6.QtCore import QTimer, QThread, Signal, QSettings
+from PySide6.QtGui import QAction, QIcon, QKeySequence
+from ui.widgets.theme_manager import ThemeManager
+from ui.views.dashboard_view import DashboardView
 
-class ThemeManager:
-    """Centralized theme management for the application"""
-    
-    # Default color schemes
-    THEMES = {
-        "dark": {
-            "bg_color": "#0F0F0F",
-            "fg_color": "#1A1A1A", 
-            "hover_color": "#2A2A2A",
-            "button_fg_color": "#2563EB",
-            "button_hover_color": "#1D4ED8",
-            "success_color": "#10B981",
-            "warning_color": "#F59E0B",
-            "error_color": "#EF4444",
-            "text_color": "#FFFFFF",
-            "text_secondary": "#9CA3AF",
-            "border_color": "#374151",
-            "card_bg": "#1F2937",
-            "accent_color": "#6366F1"
-        },
-        "light": {
-            "bg_color": "#F9FAFB",
-            "fg_color": "#FFFFFF",
-            "hover_color": "#F3F4F6",
-            "button_fg_color": "#3B82F6",
-            "button_hover_color": "#2563EB",
-            "success_color": "#34D399",
-            "warning_color": "#FBBF24",
-            "error_color": "#F87171",
-            "text_color": "#111827",
-            "text_secondary": "#6B7280",
-            "border_color": "#E5E7EB",
-            "card_bg": "#FFFFFF",
-            "accent_color": "#818CF8"
-        }
-    }
-    
-    def __init__(self):
-        self.current_theme = "dark"
-        self.theme_callbacks: List[Callable] = []
-        self.custom_themes = self._load_custom_themes()
-        
-    def _load_custom_themes(self) -> Dict[str, Dict[str, str]]:
-        """Load custom themes from configuration"""
-        theme_file = Path("config/themes.json")
-        if theme_file.exists():
-            with open(theme_file) as f:
-                return json.load(f)
-        return {}
-    
-    def get_theme(self) -> Dict[str, str]:
-        """Get current theme colors"""
-        if self.current_theme in self.custom_themes:
-            return self.custom_themes[self.current_theme]
-        return self.THEMES.get(self.current_theme, self.THEMES["dark"])
-    
-    def set_theme(self, theme_name: str):
-        """Set application theme"""
-        if theme_name in self.THEMES or theme_name in self.custom_themes:
-            self.current_theme = theme_name
-            self._apply_theme()
-            self._notify_callbacks()
-    
-    def _apply_theme(self):
-        """Apply theme to CustomTkinter"""
-        theme = self.get_theme()
-        ctk.set_appearance_mode(self.current_theme)
-        
-        # Update default colors
-        ctk.set_default_color_theme({
-            "CTk": {
-                "fg_color": [theme["fg_color"], theme["fg_color"]],
-                "bg_color": [theme["bg_color"], theme["bg_color"]],
-                "hover_color": [theme["hover_color"], theme["hover_color"]],
-                "border_color": [theme["border_color"], theme["border_color"]],
-                "text_color": [theme["text_color"], theme["text_color"]]
-            }
-        })
-    
-    def register_callback(self, callback: Callable):
-        """Register callback for theme changes"""
-        self.theme_callbacks.append(callback)
-    
-    def _notify_callbacks(self):
-        """Notify all registered callbacks of theme change"""
-        for callback in self.theme_callbacks:
-            callback(self.current_theme, self.get_theme())
-    
-    def toggle_theme(self):
-        """Toggle between light and dark themes"""
-        self.set_theme("light" if self.current_theme == "dark" else "dark")
-
-# Global theme manager instance
-theme_manager = ThemeManager()
-```
-
-#### 2. Card Component (`ui/components/card.py`)
-```python
-import customtkinter as ctk
-from typing import Optional, Callable, Tuple
-from ui.components.theme_manager import theme_manager
-
-class Card(ctk.CTkFrame):
-    """Modern card component with rounded corners and shadow effect"""
-    
-    def __init__(
-        self,
-        parent,
-        title: str = "",
-        subtitle: str = "",
-        width: int = 300,
-        height: int = 200,
-        corner_radius: int = 15,
-        border_width: int = 1,
-        clickable: bool = False,
-        on_click: Optional[Callable] = None,
-        **kwargs
-    ):
-        theme = theme_manager.get_theme()
-        
-        super().__init__(
-            parent,
-            width=width,
-            height=height,
-            corner_radius=corner_radius,
-            border_width=border_width,
-            fg_color=theme["card_bg"],
-            border_color=theme["border_color"],
-            **kwargs
-        )
-        
-        self.title = title
-        self.subtitle = subtitle
-        self.clickable = clickable
-        self.on_click = on_click
-        self.theme = theme
-        
-        self._setup_ui()
-        
-        if clickable:
-            self._setup_hover_effects()
-            if on_click:
-                self.bind("<Button-1>", lambda e: on_click())
-    
-    def _setup_ui(self):
-        """Set up card UI elements"""
-        # Title
-        if self.title:
-            self.title_label = ctk.CTkLabel(
-                self,
-                text=self.title,
-                font=ctk.CTkFont(size=16, weight="bold"),
-                text_color=self.theme["text_color"],
-                anchor="w"
-            )
-            self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="ew")
-        
-        # Subtitle
-        if self.subtitle:
-            self.subtitle_label = ctk.CTkLabel(
-                self,
-                text=self.subtitle,
-                font=ctk.CTkFont(size=12),
-                text_color=self.theme["text_secondary"],
-                anchor="w"
-            )
-            self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="ew")
-        
-        # Content frame
-        self.content_frame = ctk.CTkFrame(
-            self,
-            fg_color="transparent",
-            corner_radius=0
-        )
-        self.content_frame.grid(row=2, column=0, padx=15, pady=(0, 15), sticky="nsew")
-        
-        self.grid_rowconfigure(2, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-    
-    def _setup_hover_effects(self):
-        """Set up hover effects for clickable cards"""
-        def on_enter(e):
-            self.configure(
-                fg_color=self.theme["hover_color"],
-                border_color=self.theme["accent_color"]
-            )
-            self.configure(cursor="hand2")
-        
-        def on_leave(e):
-            self.configure(
-                fg_color=self.theme["card_bg"],
-                border_color=self.theme["border_color"]
-            )
-            self.configure(cursor="")
-        
-        self.bind("<Enter>", on_enter)
-        self.bind("<Leave>", on_leave)
-    
-    def add_content(self, widget):
-        """Add content widget to the card"""
-        widget.grid(in_=self.content_frame, sticky="nsew")
-        self.content_frame.grid_rowconfigure(0, weight=1)
-        self.content_frame.grid_columnconfigure(0, weight=1)
-```
-
-#### 3. Agent Card (`ui/components/agent_card.py`)
-```python
-import customtkinter as ctk
-from typing import Dict, Any, Optional, Callable
-from datetime import datetime
-from ui.components.card import Card
-from ui.components.theme_manager import theme_manager
-from models.agent import AgentStatus
-
-class AgentCard(Card):
-    """Specialized card for displaying agent information"""
-    
-    def __init__(
-        self,
-        parent,
-        agent_data: Dict[str, Any],
-        on_launch: Optional[Callable] = None,
-        on_stop: Optional[Callable] = None,
-        on_view_logs: Optional[Callable] = None,
-        **kwargs
-    ):
-        self.agent_data = agent_data
-        self.on_launch = on_launch
-        self.on_stop = on_stop
-        self.on_view_logs = on_view_logs
-        
-        super().__init__(
-            parent,
-            title=agent_data.get("name", "Unknown Agent"),
-            subtitle=agent_data.get("description", ""),
-            width=350,
-            height=220,
-            clickable=True,
-            on_click=self._on_card_click,
-            **kwargs
-        )
-        
-        self._setup_agent_ui()
-        self._update_status()
-    
-    def _setup_agent_ui(self):
-        """Set up agent-specific UI elements"""
-        theme = theme_manager.get_theme()
-        
-        # Status indicator
-        self.status_frame = ctk.CTkFrame(
-            self.content_frame,
-            fg_color="transparent"
-        )
-        self.status_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        
-        self.status_indicator = ctk.CTkLabel(
-            self.status_frame,
-            text="●",
-            font=ctk.CTkFont(size=20),
-            width=20
-        )
-        self.status_indicator.grid(row=0, column=0, padx=(0, 5))
-        
-        self.status_label = ctk.CTkLabel(
-            self.status_frame,
-            text=self.agent_data.get("status", "Unknown"),
-            font=ctk.CTkFont(size=12),
-            text_color=theme["text_secondary"]
-        )
-        self.status_label.grid(row=0, column=1, sticky="w")
-        
-        # Stats frame
-        self.stats_frame = ctk.CTkFrame(
-            self.content_frame,
-            fg_color="transparent"
-        )
-        self.stats_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=10)
-        
-        # Execution count
-        self.exec_count_label = ctk.CTkLabel(
-            self.stats_frame,
-            text=f"Executions: {self.agent_data.get('execution_count', 0)}",
-            font=ctk.CTkFont(size=11),
-            text_color=theme["text_secondary"]
-        )
-        self.exec_count_label.grid(row=0, column=0, sticky="w")
-        
-        # Last execution
-        last_exec = self.agent_data.get("last_execution")
-        if last_exec:
-            last_exec_str = self._format_time_ago(last_exec)
-        else:
-            last_exec_str = "Never"
-        
-        self.last_exec_label = ctk.CTkLabel(
-            self.stats_frame,
-            text=f"Last run: {last_exec_str}",
-            font=ctk.CTkFont(size=11),
-            text_color=theme["text_secondary"]
-        )
-        self.last_exec_label.grid(row=1, column=0, sticky="w", pady=(2, 0))
-        
-        # Action buttons
-        self.button_frame = ctk.CTkFrame(
-            self.content_frame,
-            fg_color="transparent"
-        )
-        self.button_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=(10, 0))
-        
-        self.launch_button = ctk.CTkButton(
-            self.button_frame,
-            text="Launch",
-            width=80,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12),
-            fg_color=theme["button_fg_color"],
-            hover_color=theme["button_hover_color"],
-            command=self._on_launch_click
-        )
-        self.launch_button.grid(row=0, column=0, padx=(0, 5))
-        
-        self.stop_button = ctk.CTkButton(
-            self.button_frame,
-            text="Stop",
-            width=60,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12),
-            fg_color=theme["error_color"],
-            hover_color=theme["error_color"],
-            command=self._on_stop_click,
-            state="disabled"
-        )
-        self.stop_button.grid(row=0, column=1, padx=(0, 5))
-        
-        self.logs_button = ctk.CTkButton(
-            self.button_frame,
-            text="Logs",
-            width=60,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12),
-            fg_color=theme["fg_color"],
-            hover_color=theme["hover_color"],
-            text_color=theme["text_color"],
-            command=self._on_logs_click
-        )
-        self.logs_button.grid(row=0, column=2)
-    
-    def _update_status(self):
-        """Update status indicator and buttons based on agent status"""
-        theme = theme_manager.get_theme()
-        status = self.agent_data.get("status", "UNKNOWN")
-        
-        # Update status indicator color
-        status_colors = {
-            "IDLE": theme["success_color"],
-            "ACTIVE": theme["warning_color"],
-            "ERROR": theme["error_color"],
-            "REGISTERED": theme["text_secondary"]
-        }
-        
-        color = status_colors.get(status, theme["text_secondary"])
-        self.status_indicator.configure(text_color=color)
-        self.status_label.configure(text=status)
-        
-        # Update button states
-        if status == "ACTIVE":
-            self.launch_button.configure(state="disabled")
-            self.stop_button.configure(state="normal")
-        else:
-            self.launch_button.configure(state="normal")
-            self.stop_button.configure(state="disabled")
-    
-    def _format_time_ago(self, timestamp: str) -> str:
-        """Format timestamp as time ago"""
-        try:
-            dt = datetime.fromisoformat(timestamp)
-            delta = datetime.now() - dt
-            
-            if delta.days > 0:
-                return f"{delta.days}d ago"
-            elif delta.seconds > 3600:
-                return f"{delta.seconds // 3600}h ago"
-            elif delta.seconds > 60:
-                return f"{delta.seconds // 60}m ago"
-            else:
-                return "Just now"
-        except:
-            return "Unknown"
-    
-    def _on_card_click(self):
-        """Handle card click"""
-        # Could show detailed agent view
-        pass
-    
-    def _on_launch_click(self):
-        """Handle launch button click"""
-        if self.on_launch:
-            self.on_launch(self.agent_data["agent_id"])
-    
-    def _on_stop_click(self):
-        """Handle stop button click"""
-        if self.on_stop:
-            self.on_stop(self.agent_data["agent_id"])
-    
-    def _on_logs_click(self):
-        """Handle logs button click"""
-        if self.on_view_logs:
-            self.on_view_logs(self.agent_data["agent_id"])
-    
-    def update_agent_data(self, agent_data: Dict[str, Any]):
-        """Update agent data and refresh UI"""
-        self.agent_data = agent_data
-        self.title_label.configure(text=agent_data.get("name", "Unknown Agent"))
-        self.subtitle_label.configure(text=agent_data.get("description", ""))
-        self.exec_count_label.configure(text=f"Executions: {agent_data.get('execution_count', 0)}")
-        
-        last_exec = agent_data.get("last_execution")
-        if last_exec:
-            last_exec_str = self._format_time_ago(last_exec)
-        else:
-            last_exec_str = "Never"
-        self.last_exec_label.configure(text=f"Last run: {last_exec_str}")
-        
-        self._update_status()
-```
-
-#### 4. Real-time Chart Component (`ui/components/realtime_chart.py`)
-```python
-import customtkinter as ctk
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.animation import FuncAnimation
-import matplotlib.pyplot as plt
-from collections import deque
-from typing import Optional, Callable, Tuple, List
-import numpy as np
-from ui.components.theme_manager import theme_manager
-
-class RealtimeChart(ctk.CTkFrame):
-    """Real-time updating chart component using matplotlib"""
-    
-    def __init__(
-        self,
-        parent,
-        title: str = "Chart",
-        xlabel: str = "Time",
-        ylabel: str = "Value",
-        max_points: int = 100,
-        update_interval: int = 1000,  # milliseconds
-        data_source: Optional[Callable[[], Tuple[float, float]]] = None,
-        **kwargs
-    ):
-        super().__init__(parent, **kwargs)
-        
-        self.title = title
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-        self.max_points = max_points
-        self.update_interval = update_interval
-        self.data_source = data_source
-        
-        # Data storage
-        self.x_data = deque(maxlen=max_points)
-        self.y_data = deque(maxlen=max_points)
-        
-        # Apply theme
-        self.theme = theme_manager.get_theme()
-        theme_manager.register_callback(self._on_theme_change)
-        
-        self._setup_chart()
-        
-        if data_source:
-            self.start_animation()
-    
-    def _setup_chart(self):
-        """Set up matplotlib chart"""
-        # Configure matplotlib style for dark theme
-        plt.style.use('dark_background' if theme_manager.current_theme == "dark" else 'default')
-        
-        # Create figure
-        self.figure = Figure(figsize=(6, 4), dpi=100, tight_layout=True)
-        self.figure.patch.set_facecolor(self.theme["card_bg"])
-        
-        self.ax = self.figure.add_subplot(111)
-        self.ax.set_facecolor(self.theme["card_bg"])
-        
-        # Set labels and title
-        self.ax.set_title(self.title, color=self.theme["text_color"], fontsize=12, pad=10)
-        self.ax.set_xlabel(self.xlabel, color=self.theme["text_secondary"], fontsize=10)
-        self.ax.set_ylabel(self.ylabel, color=self.theme["text_secondary"], fontsize=10)
-        
-        # Configure grid
-        self.ax.grid(True, alpha=0.2, color=self.theme["border_color"])
-        
-        # Configure spines
-        for spine in self.ax.spines.values():
-            spine.set_color(self.theme["border_color"])
-            spine.set_linewidth(0.5)
-        
-        # Configure tick colors
-        self.ax.tick_params(colors=self.theme["text_secondary"], labelsize=9)
-        
-        # Initialize line
-        self.line, = self.ax.plot([], [], color=self.theme["accent_color"], linewidth=2)
-        
-        # Create canvas
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(fill="both", expand=True)
-    
-    def _on_theme_change(self, theme_name: str, theme: Dict[str, str]):
-        """Handle theme change"""
-        self.theme = theme
-        self._update_chart_style()
-    
-    def _update_chart_style(self):
-        """Update chart colors based on theme"""
-        # Update figure background
-        self.figure.patch.set_facecolor(self.theme["card_bg"])
-        self.ax.set_facecolor(self.theme["card_bg"])
-        
-        # Update text colors
-        self.ax.title.set_color(self.theme["text_color"])
-        self.ax.xaxis.label.set_color(self.theme["text_secondary"])
-        self.ax.yaxis.label.set_color(self.theme["text_secondary"])
-        
-        # Update grid
-        self.ax.grid(True, alpha=0.2, color=self.theme["border_color"])
-        
-        # Update spines
-        for spine in self.ax.spines.values():
-            spine.set_color(self.theme["border_color"])
-        
-        # Update tick colors
-        self.ax.tick_params(colors=self.theme["text_secondary"])
-        
-        # Update line color
-        self.line.set_color(self.theme["accent_color"])
-        
-        self.canvas.draw()
-    
-    def update_data(self, x: float, y: float):
-        """Add new data point to the chart"""
-        self.x_data.append(x)
-        self.y_data.append(y)
-        
-        # Update line data
-        self.line.set_data(list(self.x_data), list(self.y_data))
-        
-        # Adjust axes limits
-        if self.x_data:
-            self.ax.set_xlim(min(self.x_data), max(self.x_data))
-            
-            y_margin = 0.1 * (max(self.y_data) - min(self.y_data)) if len(self.y_data) > 1 else 1
-            self.ax.set_ylim(min(self.y_data) - y_margin, max(self.y_data) + y_margin)
-        
-        self.canvas.draw()
-    
-    def _animate(self, frame):
-        """Animation function for real-time updates"""
-        if self.data_source:
-            try:
-                x, y = self.data_source()
-                self.update_data(x, y)
-            except Exception as e:
-                print(f"Error updating chart: {e}")
-    
-    def start_animation(self):
-        """Start real-time animation"""
-        self.animation = FuncAnimation(
-            self.figure,
-            self._animate,
-            interval=self.update_interval,
-            blit=False,
-            cache_frame_data=False
-        )
-    
-    def stop_animation(self):
-        """Stop real-time animation"""
-        if hasattr(self, 'animation'):
-            self.animation.event_source.stop()
-    
-    def clear_data(self):
-        """Clear all data from the chart"""
-        self.x_data.clear()
-        self.y_data.clear()
-        self.line.set_data([], [])
-        self.canvas.draw()
-```
-
-#### 5. Log Viewer Component (`ui/components/log_viewer.py`)
-```python
-import customtkinter as ctk
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-from queue import Queue
-import threading
-from ui.components.theme_manager import theme_manager
-
-class LogViewer(ctk.CTkFrame):
-    """Scrollable log viewer with filtering and real-time updates"""
-    
-    LOG_LEVELS = {
-        "DEBUG": {"color": "#6B7280", "symbol": "○"},
-        "INFO": {"color": "#10B981", "symbol": "●"},
-        "WARNING": {"color": "#F59E0B", "symbol": "▲"},
-        "ERROR": {"color": "#EF4444", "symbol": "✗"}
-    }
-    
-    def __init__(
-        self,
-        parent,
-        max_lines: int = 1000,
-        auto_scroll: bool = True,
-        show_timestamp: bool = True,
-        **kwargs
-    ):
-        super().__init__(parent, **kwargs)
-        
-        self.max_lines = max_lines
-        self.auto_scroll = auto_scroll
-        self.show_timestamp = show_timestamp
-        self.log_queue = Queue()
-        self.theme = theme_manager.get_theme()
-        
-        self._setup_ui()
-        self._start_log_processor()
-    
-    def _setup_ui(self):
-        """Set up log viewer UI"""
-        # Header with controls
-        self.header_frame = ctk.CTkFrame(self, fg_color="transparent", height=40)
-        self.header_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        self.header_frame.grid_propagate(False)
-        
-        # Filter dropdown
-        self.filter_var = ctk.StringVar(value="ALL")
-        self.filter_dropdown = ctk.CTkOptionMenu(
-            self.header_frame,
-            values=["ALL", "DEBUG", "INFO", "WARNING", "ERROR"],
-            variable=self.filter_var,
-            command=self._on_filter_change,
-            width=100,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12)
-        )
-        self.filter_dropdown.grid(row=0, column=0, padx=(0, 10))
-        
-        # Search entry
-        self.search_var = ctk.StringVar()
-        self.search_entry = ctk.CTkEntry(
-            self.header_frame,
-            placeholder_text="Search logs...",
-            textvariable=self.search_var,
-            width=200,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12)
-        )
-        self.search_entry.grid(row=0, column=1, padx=(0, 10))
-        self.search_var.trace("w", self._on_search_change)
-        
-        # Clear button
-        self.clear_button = ctk.CTkButton(
-            self.header_frame,
-            text="Clear",
-            width=60,
-            height=28,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12),
-            command=self.clear_logs
-        )
-        self.clear_button.grid(row=0, column=2)
-        
-        # Auto-scroll toggle
-        self.auto_scroll_var = ctk.BooleanVar(value=self.auto_scroll)
-        self.auto_scroll_check = ctk.CTkCheckBox(
-            self.header_frame,
-            text="Auto-scroll",
-            variable=self.auto_scroll_var,
-            onvalue=True,
-            offvalue=False,
-            command=self._toggle_auto_scroll,
-            width=100,
-            height=28,
-            font=ctk.CTkFont(size=12)
-        )
-        self.auto_scroll_check.grid(row=0, column=3, padx=(10, 0))
-        
-        # Scrollable text widget
-        self.text_frame = ctk.CTkFrame(self, corner_radius=10)
-        self.text_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=(0, 5))
-        
-        self.log_text = ctk.CTkTextbox(
-            self.text_frame,
-            font=ctk.CTkFont(family="Consolas", size=11),
-            corner_radius=10,
-            wrap="none"
-        )
-        self.log_text.pack(fill="both", expand=True)
-        
-        # Configure grid weights
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-        
-        # Store log entries
-        self.log_entries: List[Dict[str, Any]] = []
-    
-    def add_log(self, level: str, message: str, source: Optional[str] = None):
-        """Add a log entry to the viewer"""
-        timestamp = datetime.now()
-        log_entry = {
-            "timestamp": timestamp,
-            "level": level.upper(),
-            "message": message,
-            "source": source
-        }
-        
-        self.log_queue.put(log_entry)
-    
-    def _start_log_processor(self):
-        """Start background thread to process log queue"""
-        def process_logs():
-            while True:
-                try:
-                    log_entry = self.log_queue.get(timeout=0.1)
-                    self.after(0, self._add_log_entry, log_entry)
-                except:
-                    continue
-        
-        thread = threading.Thread(target=process_logs, daemon=True)
-        thread.start()
-    
-    def _add_log_entry(self, log_entry: Dict[str, Any]):
-        """Add log entry to the text widget"""
-        # Store entry
-        self.log_entries.append(log_entry)
-        
-        # Limit stored entries
-        if len(self.log_entries) > self.max_lines:
-            self.log_entries.pop(0)
-            # Remove first line from text widget
-            self.log_text.delete("1.0", "2.0")
-        
-        # Check if entry matches current filter
-        if not self._matches_filter(log_entry):
-            return
-        
-        # Format log entry
-        formatted = self._format_log_entry(log_entry)
-        
-        # Add to text widget
-        self.log_text.insert("end", formatted)
-        
-        # Auto-scroll if enabled
-        if self.auto_scroll_var.get():
-            self.log_text.see("end")
-    
-    def _format_log_entry(self, entry: Dict[str, Any]) -> str:
-        """Format a log entry for display"""
-        parts = []
-        
-        # Timestamp
-        if self.show_timestamp:
-            timestamp_str = entry["timestamp"].strftime("%H:%M:%S.%f")[:-3]
-            parts.append(f"[{timestamp_str}]")
-        
-        # Level with symbol
-        level = entry["level"]
-        level_info = self.LOG_LEVELS.get(level, {"symbol": "●", "color": "#6B7280"})
-        parts.append(f"{level_info['symbol']} {level:7}")
-        
-        # Source
-        if entry.get("source"):
-            parts.append(f"[{entry['source']}]")
-        
-        # Message
-        parts.append(entry["message"])
-        
-        return " ".join(parts) + "\n"
-    
-    def _matches_filter(self, entry: Dict[str, Any]) -> bool:
-        """Check if log entry matches current filter"""
-        # Level filter
-        filter_level = self.filter_var.get()
-        if filter_level != "ALL" and entry["level"] != filter_level:
-            return False
-        
-        # Search filter
-        search_term = self.search_var.get().lower()
-        if search_term:
-            searchable = f"{entry.get('source', '')} {entry['message']}".lower()
-            if search_term not in searchable:
-                return False
-        
-        return True
-    
-    def _on_filter_change(self, *args):
-        """Handle filter change"""
-        self._refresh_display()
-    
-    def _on_search_change(self, *args):
-        """Handle search change"""
-        self._refresh_display()
-    
-    def _refresh_display(self):
-        """Refresh the log display with current filters"""
-        self.log_text.delete("1.0", "end")
-        
-        for entry in self.log_entries:
-            if self._matches_filter(entry):
-                formatted = self._format_log_entry(entry)
-                self.log_text.insert("end", formatted)
-        
-        if self.auto_scroll_var.get():
-            self.log_text.see("end")
-    
-    def _toggle_auto_scroll(self):
-        """Toggle auto-scroll behavior"""
-        self.auto_scroll = self.auto_scroll_var.get()
-        if self.auto_scroll:
-            self.log_text.see("end")
-    
-    def clear_logs(self):
-        """Clear all logs"""
-        self.log_entries.clear()
-        self.log_text.delete("1.0", "end")
-    
-    def save_logs(self, filepath: str):
-        """Save logs to file"""
-        with open(filepath, "w") as f:
-            for entry in self.log_entries:
-                formatted = self._format_log_entry(entry)
-                f.write(formatted)
-```
-
-### Main Application Components
-
-#### 6. Side Panel (`ui/components/side_panel.py`)
-```python
-import customtkinter as ctk
-from typing import Dict, Any, List, Callable, Optional
-from ui.components.theme_manager import theme_manager
-
-class SidePanel(ctk.CTkFrame):
-    """Collapsible side navigation panel"""
-    
-    def __init__(
-        self,
-        parent,
-        width: int = 250,
-        collapsed_width: int = 60,
-        **kwargs
-    ):
-        super().__init__(parent, width=width, **kwargs)
-        
-        self.expanded_width = width
-        self.collapsed_width = collapsed_width
-        self.is_expanded = True
-        self.theme = theme_manager.get_theme()
-        
-        self.configure(fg_color=self.theme["fg_color"])
-        
-        self._setup_ui()
-    
-    def _setup_ui(self):
-        """Set up side panel UI"""
-        # Header with logo/title
-        self.header_frame = ctk.CTkFrame(
-            self,
-            height=60,
-            fg_color="transparent"
-        )
-        self.header_frame.pack(fill="x", padx=10, pady=10)
-        self.header_frame.pack_propagate(False)
-        
-        # App title
-        self.title_label = ctk.CTkLabel(
-            self.header_frame,
-            text="RS Assistant",
-            font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=self.theme["text_color"]
-        )
-        self.title_label.pack(side="left", padx=10)
-        
-        # Collapse button
-        self.collapse_button = ctk.CTkButton(
-            self.header_frame,
-            text="◀",
-            width=30,
-            height=30,
-            corner_radius=8,
-            font=ctk.CTkFont(size=16),
-            fg_color="transparent",
-            hover_color=self.theme["hover_color"],
-            command=self.toggle_panel
-        )
-        self.collapse_button.pack(side="right")
-        
-        # Separator
-        self.separator = ctk.CTkFrame(
-            self,
-            height=1,
-            fg_color=self.theme["border_color"]
-        )
-        self.separator.pack(fill="x", padx=20, pady=(0, 10))
-        
-        # Navigation items container
-        self.nav_frame = ctk.CTkScrollableFrame(
-            self,
-            fg_color="transparent",
-            scrollbar_button_color=self.theme["border_color"],
-            scrollbar_button_hover_color=self.theme["accent_color"]
-        )
-        self.nav_frame.pack(fill="both", expand=True, padx=5)
-        
-        self.nav_items: List[NavigationItem] = []
-    
-    def add_navigation_item(
-        self,
-        icon: str,
-        label: str,
-        command: Optional[Callable] = None,
-        badge_value: Optional[int] = None
-    ) -> 'NavigationItem':
-        """Add a navigation item to the panel"""
-        nav_item = NavigationItem(
-            self.nav_frame,
-            icon=icon,
-            label=label,
-            command=command,
-            badge_value=badge_value,
-            is_expanded=self.is_expanded
-        )
-        nav_item.pack(fill="x", pady=2)
-        self.nav_items.append(nav_item)
-        return nav_item
-    
-    def add_section_header(self, title: str):
-        """Add a section header"""
-        if self.is_expanded:
-            header = ctk.CTkLabel(
-                self.nav_frame,
-                text=title.upper(),
-                font=ctk.CTkFont(size=11, weight="bold"),
-                text_color=self.theme["text_secondary"],
-                anchor="w"
-            )
-            header.pack(fill="x", padx=15, pady=(15, 5))
-    
-    def toggle_panel(self):
-        """Toggle between expanded and collapsed states"""
-        self.is_expanded = not self.is_expanded
-        
-        if self.is_expanded:
-            self.configure(width=self.expanded_width)
-            self.collapse_button.configure(text="◀")
-            self.title_label.pack(side="left", padx=10)
-        else:
-            self.configure(width=self.collapsed_width)
-            self.collapse_button.configure(text="▶")
-            self.title_label.pack_forget()
-        
-        # Update navigation items
-        for item in self.nav_items:
-            item.set_expanded(self.is_expanded)
-    
-    def set_active_item(self, index: int):
-        """Set the active navigation item"""
-        for i, item in enumerate(self.nav_items):
-            item.set_active(i == index)
-
-
-class NavigationItem(ctk.CTkFrame):
-    """Individual navigation item in side panel"""
-    
-    def __init__(
-        self,
-        parent,
-        icon: str,
-        label: str,
-        command: Optional[Callable] = None,
-        badge_value: Optional[int] = None,
-        is_expanded: bool = True,
-        **kwargs
-    ):
-        super().__init__(parent, height=45, corner_radius=10, **kwargs)
-        
-        self.icon = icon
-        self.label = label
-        self.command = command
-        self.badge_value = badge_value
-        self.is_expanded = is_expanded
-        self.is_active = False
-        self.theme = theme_manager.get_theme()
-        
-        self.configure(fg_color="transparent")
-        self.pack_propagate(False)
-        
-        self._setup_ui()
-        self._setup_hover_effects()
-    
-    def _setup_ui(self):
-        """Set up navigation item UI"""
-        # Icon
-        self.icon_label = ctk.CTkLabel(
-            self,
-            text=self.icon,
-            font=ctk.CTkFont(size=20),
-            width=40
-        )
-        self.icon_label.pack(side="left", padx=(10, 5))
-        
-        if self.is_expanded:
-            # Label
-            self.text_label = ctk.CTkLabel(
-                self,
-                text=self.label,
-                font=ctk.CTkFont(size=14),
-                anchor="w"
-            )
-            self.text_label.pack(side="left", fill="x", expand=True)
-            
-            # Badge
-            if self.badge_value is not None:
-                self.badge_label = ctk.CTkLabel(
-                    self,
-                    text=str(self.badge_value),
-                    font=ctk.CTkFont(size=11),
-                    width=25,
-                    height=20,
-                    corner_radius=10,
-                    fg_color=self.theme["accent_color"],
-                    text_color="white"
-                )
-                self.badge_label.pack(side="right", padx=10)
-    
-    def _setup_hover_effects(self):
-        """Set up hover effects"""
-        def on_enter(e):
-            if not self.is_active:
-                self.configure(fg_color=self.theme["hover_color"])
-        
-        def on_leave(e):
-            if not self.is_active:
-                self.configure(fg_color="transparent")
-        
-        def on_click(e):
-            if self.command:
-                self.command()
-        
-        self.bind("<Enter>", on_enter)
-        self.bind("<Leave>", on_leave)
-        self.bind("<Button-1>", on_click)
-        
-        # Bind to all child widgets
-        for child in self.winfo_children():
-            child.bind("<Enter>", on_enter)
-            child.bind("<Leave>", on_leave)
-            child.bind("<Button-1>", on_click)
-    
-    def set_expanded(self, expanded: bool):
-        """Update item for expanded/collapsed state"""
-        self.is_expanded = expanded
-        
-        # Clear current UI
-        for widget in self.winfo_children():
-            widget.destroy()
-        
-        # Rebuild UI
-        self._setup_ui()
-        self._setup_hover_effects()
-    
-    def set_active(self, active: bool):
-        """Set item as active/inactive"""
-        self.is_active = active
-        if active:
-            self.configure(fg_color=self.theme["accent_color"])
-            if hasattr(self, 'text_label'):
-                self.text_label.configure(text_color="white")
-            self.icon_label.configure(text_color="white")
-        else:
-            self.configure(fg_color="transparent")
-            if hasattr(self, 'text_label'):
-                self.text_label.configure(text_color=self.theme["text_color"])
-            self.icon_label.configure(text_color=self.theme["text_color"])
-    
-    def update_badge(self, value: Optional[int]):
-        """Update badge value"""
-        self.badge_value = value
-        if hasattr(self, 'badge_label'):
-            if value is not None:
-                self.badge_label.configure(text=str(value))
-                self.badge_label.pack(side="right", padx=10)
-            else:
-                self.badge_label.pack_forget()
-```
-
-#### 7. Agent Timeline View (`ui/components/timeline_view.py`)
-```python
-import customtkinter as ctk
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
-from ui.components.theme_manager import theme_manager
-from ui.components.card import Card
-
-class TimelineView(Card):
-    """Timeline view showing agent execution history and schedule"""
-    
-    def __init__(
-        self,
-        parent,
-        hours_to_show: int = 24,
-        **kwargs
-    ):
-        super().__init__(
-            parent,
-            title="Agent Timeline",
-            subtitle=f"Last {hours_to_show} hours",
-            height=300,
-            **kwargs
-        )
-        
-        self.hours_to_show = hours_to_show
-        self.timeline_data: Dict[str, List[Dict[str, Any]]] = {}
-        self.theme = theme_manager.get_theme()
-        
-        self._setup_timeline_ui()
-    
-    def _setup_timeline_ui(self):
-        """Set up timeline UI components"""
-        # Timeline canvas
-        self.canvas = ctk.CTkCanvas(
-            self.content_frame,
-            bg=self.theme["card_bg"],
-            highlightthickness=0
-        )
-        self.canvas.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        # Bind resize event
-        self.canvas.bind("<Configure>", self._on_canvas_resize)
-        
-        # Time axis labels
-        self.time_labels = []
-        
-        # Initial draw
-        self.after(100, self._draw_timeline)
-    
-    def _on_canvas_resize(self, event):
-        """Handle canvas resize"""
-        self._draw_timeline()
-    
-    def _draw_timeline(self):
-        """Draw the timeline visualization"""
-        self.canvas.delete("all")
-        
-        width = self.canvas.winfo_width()
-        height = self.canvas.winfo_height()
-        
-        if width < 2 or height < 2:
-            return
-        
-        # Calculate dimensions
-        margin_left = 100
-        margin_right = 20
-        margin_top = 30
-        margin_bottom = 40
-        
-        timeline_width = width - margin_left - margin_right
-        timeline_height = height - margin_top - margin_bottom
-        
-        # Draw time axis
-        self._draw_time_axis(
-            margin_left, margin_top, 
-            timeline_width, timeline_height
-        )
-        
-        # Draw agent rows
-        self._draw_agent_rows(
-            margin_left, margin_top,
-            timeline_width, timeline_height
-        )
-        
-        # Draw events
-        self._draw_events(
-            margin_left, margin_top,
-            timeline_width, timeline_height
-        )
-    
-    def _draw_time_axis(self, x: int, y: int, width: int, height: int):
-        """Draw time axis with labels"""
-        # Horizontal axis line
-        self.canvas.create_line(
-            x, y + height,
-            x + width, y + height,
-            fill=self.theme["border_color"],
-            width=1
-        )
-        
-        # Time markers
-        now = datetime.now()
-        start_time = now - timedelta(hours=self.hours_to_show)
-        
-        # Draw hour markers
-        for i in range(self.hours_to_show + 1):
-            time_offset = i * (width / self.hours_to_show)
-            marker_x = x + time_offset
-            
-            # Vertical line
-            self.canvas.create_line(
-                marker_x, y + height - 5,
-                marker_x, y + height + 5,
-                fill=self.theme["border_color"],
-                width=1
-            )
-            
-            # Time label
-            marker_time = start_time + timedelta(hours=i)
-            time_str = marker_time.strftime("%H:%M")
-            
-            self.canvas.create_text(
-                marker_x, y + height + 15,
-                text=time_str,
-                fill=self.theme["text_secondary"],
-                font=("Arial", 9),
-                anchor="n"
-            )
-    
-    def _draw_agent_rows(self, x: int, y: int, width: int, height: int):
-        """Draw horizontal rows for each agent"""
-        agents = list(self.timeline_data.keys())
-        if not agents:
-            # Show empty state
-            self.canvas.create_text(
-                x + width / 2, y + height / 2,
-                text="No agent activity to display",
-                fill=self.theme["text_secondary"],
-                font=("Arial", 12),
-                anchor="center"
-            )
-            return
-        
-        row_height = height / len(agents)
-        
-        for i, agent_name in enumerate(agents):
-            row_y = y + i * row_height
-            
-            # Agent name label
-            self.canvas.create_text(
-                x - 10, row_y + row_height / 2,
-                text=agent_name,
-                fill=self.theme["text_color"],
-                font=("Arial", 10),
-                anchor="e"
-            )
-            
-            # Horizontal separator
-            if i > 0:
-                self.canvas.create_line(
-                    x, row_y,
-                    x + width, row_y,
-                    fill=self.theme["border_color"],
-                    width=1,
-                    dash=(2, 2)
-                )
-    
-    def _draw_events(self, x: int, y: int, width: int, height: int):
-        """Draw event blocks on the timeline"""
-        now = datetime.now()
-        start_time = now - timedelta(hours=self.hours_to_show)
-        time_range = self.hours_to_show * 3600  # seconds
-        
-        agents = list(self.timeline_data.keys())
-        if not agents:
-            return
-        
-        row_height = height / len(agents)
-        
-        for i, agent_name in enumerate(agents):
-            events = self.timeline_data.get(agent_name, [])
-            row_y = y + i * row_height
-            
-            for event in events:
-                # Calculate event position
-                event_start = event["start_time"]
-                event_end = event.get("end_time", now)
-                
-                # Skip events outside the visible range
-                if event_end < start_time or event_start > now:
-                    continue
-                
-                # Clamp to visible range
-                visible_start = max(event_start, start_time)
-                visible_end = min(event_end, now)
-                
-                # Calculate pixel positions
-                start_offset = (visible_start - start_time).total_seconds()
-                end_offset = (visible_end - start_time).total_seconds()
-                
-                start_x = x + (start_offset / time_range) * width
-                end_x = x + (end_offset / time_range) * width
-                
-                # Draw event block
-                block_height = row_height * 0.6
-                block_y = row_y + (row_height - block_height) / 2
-                
-                # Determine color based on status
-                status = event.get("status", "running")
-                colors = {
-                    "completed": self.theme["success_color"],
-                    "running": self.theme["warning_color"],
-                    "failed": self.theme["error_color"]
-                }
-                color = colors.get(status, self.theme["accent_color"])
-                
-                # Draw rectangle
-                rect_id = self.canvas.create_rectangle(
-                    start_x, block_y,
-                    end_x, block_y + block_height,
-                    fill=color,
-                    outline="",
-                    tags=("event",)
-                )
-                
-                # Store event data for tooltip
-                self.canvas.tag_bind(
-                    rect_id,
-                    "<Enter>",
-                    lambda e, ev=event: self._show_event_tooltip(e, ev)
-                )
-                self.canvas.tag_bind(
-                    rect_id,
-                    "<Leave>",
-                    lambda e: self._hide_event_tooltip()
-                )
-    
-    def _show_event_tooltip(self, event, event_data: Dict[str, Any]):
-        """Show tooltip for event"""
-        # Implementation for tooltip display
-        pass
-    
-    def _hide_event_tooltip(self):
-        """Hide event tooltip"""
-        # Implementation for tooltip hiding
-        pass
-    
-    def update_timeline_data(self, agent_name: str, events: List[Dict[str, Any]]):
-        """Update timeline data for an agent"""
-        self.timeline_data[agent_name] = events
-        self._draw_timeline()
-    
-    def add_event(self, agent_name: str, event: Dict[str, Any]):
-        """Add a single event to the timeline"""
-        if agent_name not in self.timeline_data:
-            self.timeline_data[agent_name] = []
-        
-        self.timeline_data[agent_name].append(event)
-        self._draw_timeline()
-    
-    def clear_timeline(self):
-        """Clear all timeline data"""
-        self.timeline_data.clear()
-        self._draw_timeline()
-```
-
-### Main Application Window
-
-#### 8. Agent Admin Dashboard (`ui/agent_admin_dashboard.py`)
-```python
-import customtkinter as ctk
-from typing import Dict, Any, List, Optional
-import threading
-import time
-from datetime import datetime
-from queue import Queue
-
-from ui.components.theme_manager import theme_manager
-from ui.components.side_panel import SidePanel
-from ui.components.agent_card import AgentCard
-from ui.components.realtime_chart import RealtimeChart
-from ui.components.log_viewer import LogViewer
-from ui.components.timeline_view import TimelineView
-from ui.components.card import Card
-
-from core.agent_manager import AgentManager
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
-
-class AgentAdminDashboard(ctk.CTk):
-    """Main application window for Agent Admin Panel"""
+class MainWindow(QMainWindow):
+    """Main application window with native Qt interface"""
     
     def __init__(self):
         super().__init__()
+        self.settings = QSettings("Roostership", "RSPersonalAgent")
+        self.theme_manager = ThemeManager()
         
-        # Window configuration
-        self.title("RS Personal Assistant - Agent Admin Panel")
-        self.geometry("1400x900")
-        self.minsize(1200, 700)
+        self.setWindowTitle("RS Personal Agent")
+        self.setMinimumSize(1200, 800)
         
-        # Initialize core components
-        self._init_core_components()
-        
-        # Apply theme
-        theme_manager.set_theme("dark")
-        
-        # Set up UI
         self._setup_ui()
+        self._setup_menu_bar()
+        self._setup_toolbar()
+        self._setup_status_bar()
+        self._setup_timers()
+        self._apply_theme()
         
-        # Start background tasks
-        self._start_background_tasks()
-        
-        # Load initial data
-        self._load_initial_data()
-    
-    def _init_core_components(self):
-        """Initialize core system components"""
-        self.db_manager = DatabaseManager()
-        self.llm_manager = LLMManager()
-        self.config_manager = ConfigManager()
-        self.agent_manager = AgentManager(
-            self.db_manager,
-            self.llm_manager,
-            self.config_manager
-        )
-        
-        # Data storage
-        self.agent_cards: Dict[str, AgentCard] = {}
-        self.update_queue = Queue()
-    
     def _setup_ui(self):
         """Set up the main UI layout"""
-        # Configure grid
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        # Central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         
-        # Side panel
-        self.side_panel = SidePanel(self)
-        self.side_panel.grid(row=0, column=0, sticky="ns")
+        # Main horizontal layout
+        main_layout = QHBoxLayout()
+        central_widget.setLayout(main_layout)
         
-        self._setup_navigation()
+        # Side panel (navigation)
+        self.side_panel = SidePanel()
+        self.side_panel.page_changed.connect(self._change_page)
+        main_layout.addWidget(self.side_panel, 0)  # Fixed width
         
-        # Main content area
-        self.main_frame = ctk.CTkFrame(
-            self,
-            fg_color=theme_manager.get_theme()["bg_color"]
-        )
-        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=(0, 0), pady=0)
+        # Main content area (stacked widget for different pages)
+        self.content_stack = QStackedWidget()
+        main_layout.addWidget(self.content_stack, 1)  # Expandable
         
-        # Content pages
-        self.content_frames = {}
-        self._setup_content_pages()
+        # Add content pages
+        self.dashboard_view = DashboardView()
+        self.agents_view = AgentsView()
+        self.logs_view = LogsView()
+        self.settings_view = SettingsView()
         
-        # Status bar
-        self._setup_status_bar()
+        self.content_stack.addWidget(self.dashboard_view)
+        self.content_stack.addWidget(self.agents_view)
+        self.content_stack.addWidget(self.logs_view)
+        self.content_stack.addWidget(self.settings_view)
         
-        # Show default page
-        self._show_page("agents")
+    def _setup_menu_bar(self):
+        """Create native menu bar"""
+        menubar = self.menuBar()
+        
+        # File menu
+        file_menu = menubar.addMenu('&File')
+        
+        settings_action = QAction('&Preferences...', self)
+        settings_action.setShortcut(QKeySequence.Preferences)
+        settings_action.triggered.connect(self._show_settings)
+        file_menu.addAction(settings_action)
+        
+        file_menu.addSeparator()
+        
+        quit_action = QAction('&Quit', self)
+        quit_action.setShortcut(QKeySequence.Quit)
+        quit_action.triggered.connect(self.close)
+        file_menu.addAction(quit_action)
+        
+        # Agents menu
+        agents_menu = menubar.addMenu('&Agents')
+        
+        start_all_action = QAction('&Start All', self)
+        start_all_action.setShortcut('Ctrl+R')
+        start_all_action.triggered.connect(self._start_all_agents)
+        agents_menu.addAction(start_all_action)
+        
+        stop_all_action = QAction('St&op All', self)
+        stop_all_action.setShortcut('Ctrl+T')
+        stop_all_action.triggered.connect(self._stop_all_agents)
+        agents_menu.addAction(stop_all_action)
+        
+        # View menu
+        view_menu = menubar.addMenu('&View')
+        
+        toggle_theme_action = QAction('Toggle &Theme', self)
+        toggle_theme_action.setShortcut('Ctrl+Shift+T')
+        toggle_theme_action.triggered.connect(self.theme_manager.toggle_theme)
+        view_menu.addAction(toggle_theme_action)
+        
+        refresh_action = QAction('&Refresh', self)
+        refresh_action.setShortcut(QKeySequence.Refresh)
+        refresh_action.triggered.connect(self._refresh_data)
+        view_menu.addAction(refresh_action)
+```
+
+#### 2. Theme Manager (`ui/widgets/theme_manager.py`)
+```python
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal, QSettings
+from PySide6.QtGui import QPalette, QColor
+from enum import Enum
+from typing import Dict
+
+class Theme(Enum):
+    AUTO = "auto"
+    LIGHT = "light"
+    DARK = "dark"
+
+class ThemeManager(QObject):
+    """Centralized theme management for Qt application"""
     
-    def _setup_navigation(self):
-        """Set up navigation items in side panel"""
-        # Main navigation
-        self.side_panel.add_navigation_item(
-            icon="🤖",
-            label="Agents",
-            command=lambda: self._show_page("agents"),
-            badge_value=None
-        )
-        
-        self.side_panel.add_navigation_item(
-            icon="📊",
-            label="Dashboard",
-            command=lambda: self._show_page("dashboard")
-        )
-        
-        self.side_panel.add_navigation_item(
-            icon="📋",
-            label="Logs",
-            command=lambda: self._show_page("logs")
-        )
-        
-        self.side_panel.add_navigation_item(
-            icon="⏱️",
-            label="Timeline",
-            command=lambda: self._show_page("timeline")
-        )
-        
-        # Settings section
-        self.side_panel.add_section_header("Settings")
-        
-        self.side_panel.add_navigation_item(
-            icon="⚙️",
-            label="Configuration",
-            command=lambda: self._show_page("config")
-        )
-        
-        self.side_panel.add_navigation_item(
-            icon="🎨",
-            label="Theme",
-            command=self._toggle_theme
-        )
-        
-        # Set first item as active
-        self.side_panel.set_active_item(0)
+    theme_changed = Signal(str)  # Emits theme name when changed
     
-    def _setup_content_pages(self):
-        """Set up different content pages"""
-        # Agents page
-        self.content_frames["agents"] = self._create_agents_page()
-        
-        # Dashboard page
-        self.content_frames["dashboard"] = self._create_dashboard_page()
-        
-        # Logs page
-        self.content_frames["logs"] = self._create_logs_page()
-        
-        # Timeline page
-        self.content_frames["timeline"] = self._create_timeline_page()
-        
-        # Config page
-        self.content_frames["config"] = self._create_config_page()
-    
-    def _create_agents_page(self) -> ctk.CTkFrame:
-        """Create agents management page"""
-        page = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
-        # Header
-        header_frame = ctk.CTkFrame(page, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="Agent Management",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        title_label.pack(side="left")
-        
-        # Launch all button
-        launch_all_btn = ctk.CTkButton(
-            header_frame,
-            text="Launch All",
-            width=100,
-            height=35,
-            corner_radius=8,
-            command=self._launch_all_agents
-        )
-        launch_all_btn.pack(side="right", padx=(10, 0))
-        
-        # Stop all button
-        stop_all_btn = ctk.CTkButton(
-            header_frame,
-            text="Stop All",
-            width=100,
-            height=35,
-            corner_radius=8,
-            fg_color=theme_manager.get_theme()["error_color"],
-            command=self._stop_all_agents
-        )
-        stop_all_btn.pack(side="right")
-        
-        # Scrollable frame for agent cards
-        self.agents_scroll = ctk.CTkScrollableFrame(
-            page,
-            fg_color="transparent"
-        )
-        self.agents_scroll.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        # Grid configuration for cards
-        self.agents_grid_frame = ctk.CTkFrame(
-            self.agents_scroll,
-            fg_color="transparent"
-        )
-        self.agents_grid_frame.pack(fill="both", expand=True)
-        
-        return page
-    
-    def _create_dashboard_page(self) -> ctk.CTkFrame:
-        """Create dashboard overview page"""
-        page = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
-        # Header
-        header_frame = ctk.CTkFrame(page, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="System Dashboard",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        title_label.pack(side="left")
-        
-        # Stats cards row
-        stats_frame = ctk.CTkFrame(page, fg_color="transparent")
-        stats_frame.pack(fill="x", padx=20, pady=(0, 20))
-        
-        # Create stat cards
-        self._create_stat_card(stats_frame, "Total Agents", "0", "🤖").pack(side="left", padx=(0, 10))
-        self._create_stat_card(stats_frame, "Active Agents", "0", "🟢").pack(side="left", padx=(0, 10))
-        self._create_stat_card(stats_frame, "Tasks Today", "0", "📊").pack(side="left", padx=(0, 10))
-        self._create_stat_card(stats_frame, "Success Rate", "0%", "✅").pack(side="left")
-        
-        # Charts row
-        charts_frame = ctk.CTkFrame(page, fg_color="transparent")
-        charts_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        # CPU usage chart
-        self.cpu_chart = RealtimeChart(
-            charts_frame,
-            title="System CPU Usage",
-            ylabel="Usage %",
-            max_points=60,
-            update_interval=1000,
-            data_source=self._get_cpu_usage
-        )
-        self.cpu_chart.pack(side="left", fill="both", expand=True, padx=(0, 10))
-        
-        # Memory usage chart
-        self.memory_chart = RealtimeChart(
-            charts_frame,
-            title="Memory Usage",
-            ylabel="MB",
-            max_points=60,
-            update_interval=1000,
-            data_source=self._get_memory_usage
-        )
-        self.memory_chart.pack(side="left", fill="both", expand=True)
-        
-        return page
-    
-    def _create_logs_page(self) -> ctk.CTkFrame:
-        """Create logs viewer page"""
-        page = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
-        # Header
-        header_frame = ctk.CTkFrame(page, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="System Logs",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        title_label.pack(side="left")
-        
-        # Log viewer
-        self.log_viewer = LogViewer(page)
-        self.log_viewer.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        return page
-    
-    def _create_timeline_page(self) -> ctk.CTkFrame:
-        """Create timeline view page"""
-        page = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
-        # Header
-        header_frame = ctk.CTkFrame(page, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="Agent Timeline",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        title_label.pack(side="left")
-        
-        # Timeline view
-        self.timeline_view = TimelineView(page, hours_to_show=24)
-        self.timeline_view.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        return page
-    
-    def _create_config_page(self) -> ctk.CTkFrame:
-        """Create configuration page"""
-        page = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
-        # Header
-        header_frame = ctk.CTkFrame(page, fg_color="transparent", height=60)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="Configuration",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        title_label.pack(side="left")
-        
-        # Config sections
-        config_scroll = ctk.CTkScrollableFrame(page, fg_color="transparent")
-        config_scroll.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        
-        # Add configuration sections here
-        
-        return page
-    
-    def _create_stat_card(self, parent, title: str, value: str, icon: str) -> Card:
-        """Create a statistics card"""
-        card = Card(parent, width=200, height=100)
-        
-        # Icon and value row
-        content_frame = ctk.CTkFrame(card.content_frame, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True)
-        
-        icon_label = ctk.CTkLabel(
-            content_frame,
-            text=icon,
-            font=ctk.CTkFont(size=30)
-        )
-        icon_label.pack(side="left", padx=(10, 20))
-        
-        value_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
-        value_frame.pack(side="left", fill="both", expand=True)
-        
-        value_label = ctk.CTkLabel(
-            value_frame,
-            text=value,
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        value_label.pack(anchor="w")
-        
-        title_label = ctk.CTkLabel(
-            value_frame,
-            text=title,
-            font=ctk.CTkFont(size=12),
-            text_color=theme_manager.get_theme()["text_secondary"]
-        )
-        title_label.pack(anchor="w")
-        
-        return card
-    
-    def _setup_status_bar(self):
-        """Set up status bar at bottom of window"""
-        self.status_bar = ctk.CTkFrame(
-            self,
-            height=30,
-            fg_color=theme_manager.get_theme()["fg_color"]
-        )
-        self.status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
-        self.status_bar.grid_propagate(False)
-        
-        # Status text
-        self.status_label = ctk.CTkLabel(
-            self.status_bar,
-            text="Ready",
-            font=ctk.CTkFont(size=11),
-            text_color=theme_manager.get_theme()["text_secondary"]
-        )
-        self.status_label.pack(side="left", padx=10)
-        
-        # Connection status
-        self.connection_label = ctk.CTkLabel(
-            self.status_bar,
-            text="● Connected to Ollama",
-            font=ctk.CTkFont(size=11),
-            text_color=theme_manager.get_theme()["success_color"]
-        )
-        self.connection_label.pack(side="right", padx=10)
-    
-    def _show_page(self, page_name: str):
-        """Show specific content page"""
-        # Hide all pages
-        for frame in self.content_frames.values():
-            frame.pack_forget()
-        
-        # Show selected page
-        if page_name in self.content_frames:
-            self.content_frames[page_name].pack(fill="both", expand=True)
-        
-        # Update navigation
-        page_indices = {
-            "agents": 0,
-            "dashboard": 1,
-            "logs": 2,
-            "timeline": 3,
-            "config": 4
+    # Modern color schemes
+    THEMES = {
+        "dark": {
+            "window": "#1e1e1e",
+            "window_text": "#ffffff", 
+            "base": "#2d2d2d",
+            "alternate_base": "#3a3a3a",
+            "button": "#404040",
+            "button_text": "#ffffff",
+            "highlight": "#0078d4",
+            "highlighted_text": "#ffffff",
+            "link": "#4dc7ff",
+            "success": "#10b981",
+            "warning": "#f59e0b", 
+            "error": "#ef4444",
+            "text_secondary": "#9ca3af",
+            "border": "#4a5568",
+            "accent": "#6366f1"
+        },
+        "light": {
+            "window": "#f9fafb",
+            "window_text": "#111827",
+            "base": "#ffffff", 
+            "alternate_base": "#f3f4f6",
+            "button": "#e5e7eb",
+            "button_text": "#374151",
+            "highlight": "#3b82f6",
+            "highlighted_text": "#ffffff",
+            "link": "#2563eb",
+            "success": "#059669",
+            "warning": "#d97706",
+            "error": "#dc2626", 
+            "text_secondary": "#6b7280",
+            "border": "#d1d5db",
+            "accent": "#818cf8"
         }
-        if page_name in page_indices:
-            self.side_panel.set_active_item(page_indices[page_name])
+    }
     
-    def _toggle_theme(self):
+    def __init__(self):
+        super().__init__()
+        self.settings = QSettings()
+        self.current_theme = self.settings.value("theme", Theme.AUTO.value)
+        self.apply_theme(self.current_theme)
+        
+    def apply_theme(self, theme_name: str):
+        """Apply theme to the Qt application"""
+        app = QApplication.instance()
+        if not app:
+            return
+            
+        # Determine actual theme to use
+        if theme_name == Theme.AUTO.value:
+            # Detect system theme preference
+            palette = app.palette()
+            is_dark = palette.color(QPalette.Window).lightness() < 128
+            actual_theme = "dark" if is_dark else "light"
+        else:
+            actual_theme = theme_name
+            
+        # Get theme colors
+        colors = self.THEMES.get(actual_theme, self.THEMES["dark"])
+        
+        # Create and apply palette
+        palette = QPalette()
+        
+        # Window colors
+        palette.setColor(QPalette.Window, QColor(colors["window"]))
+        palette.setColor(QPalette.WindowText, QColor(colors["window_text"]))
+        
+        # Input colors
+        palette.setColor(QPalette.Base, QColor(colors["base"]))
+        palette.setColor(QPalette.AlternateBase, QColor(colors["alternate_base"]))
+        palette.setColor(QPalette.Text, QColor(colors["window_text"]))
+        
+        # Button colors
+        palette.setColor(QPalette.Button, QColor(colors["button"]))
+        palette.setColor(QPalette.ButtonText, QColor(colors["button_text"]))
+        
+        # Selection colors
+        palette.setColor(QPalette.Highlight, QColor(colors["highlight"]))
+        palette.setColor(QPalette.HighlightedText, QColor(colors["highlighted_text"]))
+        
+        # Link colors
+        palette.setColor(QPalette.Link, QColor(colors["link"]))
+        
+        # Apply the palette
+        app.setPalette(palette)
+        
+        # Store current theme
+        self.current_theme = theme_name
+        self.settings.setValue("theme", theme_name)
+        
+        # Apply additional stylesheet for custom styling
+        self._apply_stylesheet(actual_theme, colors)
+        
+        # Emit signal for custom widgets to update
+        self.theme_changed.emit(actual_theme)
+        
+    def _apply_stylesheet(self, theme_name: str, colors: Dict[str, str]):
+        """Apply custom stylesheet for enhanced styling"""
+        app = QApplication.instance()
+        
+        stylesheet = f"""
+        /* Main window styling */
+        QMainWindow {{
+            background-color: {colors['window']};
+            color: {colors['window_text']};
+        }}
+        
+        /* Status indicators */
+        QLabel[statusIndicator="true"] {{
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }}
+        
+        QLabel[status="connected"] {{
+            background-color: {colors['success']};
+            color: white;
+        }}
+        
+        QLabel[status="disconnected"] {{
+            background-color: {colors['error']};
+            color: white;
+        }}
+        
+        QLabel[status="warning"] {{
+            background-color: {colors['warning']};
+            color: white;
+        }}
+        
+        /* Table styling */
+        QTableView {{
+            gridline-color: {colors['border']};
+            selection-background-color: {colors['highlight']};
+            alternate-background-color: {colors['alternate_base']};
+        }}
+        
+        QTableView::item:selected {{
+            background-color: {colors['highlight']};
+            color: {colors['highlighted_text']};
+        }}
+        
+        /* Headers */
+        QHeaderView::section {{
+            background-color: {colors['button']};
+            color: {colors['button_text']};
+            padding: 8px;
+            border: 1px solid {colors['border']};
+            font-weight: bold;
+        }}
+        
+        /* Buttons */
+        QPushButton {{
+            background-color: {colors['button']};
+            color: {colors['button_text']};
+            border: 1px solid {colors['border']};
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }}
+        
+        QPushButton:hover {{
+            background-color: {colors['highlight']};
+            color: {colors['highlighted_text']};
+        }}
+        
+        QPushButton:pressed {{
+            background-color: {colors['accent']};
+        }}
+        
+        QPushButton[primary="true"] {{
+            background-color: {colors['accent']};
+            color: white;
+            border: none;
+        }}
+        
+        /* Side panel */
+        QFrame[role="sidePanel"] {{
+            background-color: {colors['base']};
+            border-right: 1px solid {colors['border']};
+        }}
+        """
+        
+        app.setStyleSheet(stylesheet)
+        
+    def toggle_theme(self):
         """Toggle between light and dark themes"""
-        theme_manager.toggle_theme()
-        
-        # Update status
-        self.status_label.configure(text=f"Theme changed to {theme_manager.current_theme}")
-    
-    def _load_initial_data(self):
-        """Load initial agent data"""
-        agents = self.agent_manager.list_agents()
-        
-        # Clear existing cards
-        for card in self.agent_cards.values():
-            card.destroy()
-        self.agent_cards.clear()
-        
-        # Create agent cards
-        for i, agent_data in enumerate(agents):
-            agent_id = agent_data["agent_id"]
-            card = AgentCard(
-                self.agents_grid_frame,
-                agent_data,
-                on_launch=self._launch_agent,
-                on_stop=self._stop_agent,
-                on_view_logs=self._view_agent_logs
-            )
+        if self.current_theme == Theme.DARK.value:
+            self.apply_theme(Theme.LIGHT.value)
+        else:
+            self.apply_theme(Theme.DARK.value)
             
-            # Grid layout
-            row = i // 3
-            col = i % 3
-            card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+    def get_color(self, color_name: str) -> str:
+        """Get color value for current theme"""
+        actual_theme = self.current_theme
+        if actual_theme == Theme.AUTO.value:
+            # Determine actual theme
+            app = QApplication.instance()
+            if app:
+                palette = app.palette()
+                is_dark = palette.color(QPalette.Window).lightness() < 128
+                actual_theme = "dark" if is_dark else "light"
+            else:
+                actual_theme = "dark"
+                
+        return self.THEMES.get(actual_theme, self.THEMES["dark"]).get(color_name, "#000000")
+```
+
+#### 3. Side Navigation Panel (`ui/widgets/side_panel.py`)
+```python
+from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, 
+                             QPushButton, QLabel, QButtonGroup, QSpacerItem, QSizePolicy)
+from PySide6.QtCore import Signal, QSize
+from PySide6.QtGui import QIcon
+from typing import List, Dict
+
+class SidePanel(QFrame):
+    """Collapsible side navigation panel with Qt widgets"""
+    
+    page_changed = Signal(int)  # Emits page index
+    
+    def __init__(self):
+        super().__init__()
+        self.setProperty("role", "sidePanel")
+        self.setFixedWidth(200)
+        self.setFrameStyle(QFrame.StyledPanel)
+        
+        self.current_page = 0
+        self.nav_buttons = []
+        self.button_group = QButtonGroup(self)
+        
+        self._setup_ui()
+        
+    def _setup_ui(self):
+        """Set up side panel layout"""
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Header with app title
+        header_frame = QFrame()
+        header_layout = QVBoxLayout()
+        header_frame.setLayout(header_layout)
+        
+        title_label = QLabel("RS Assistant")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; padding: 10px;")
+        header_layout.addWidget(title_label)
+        
+        layout.addWidget(header_frame)
+        
+        # Navigation buttons
+        nav_items = [
+            ("Dashboard", "📊"),
+            ("Agents", "🤖"), 
+            ("Logs", "📋"),
+            ("Settings", "⚙️")
+        ]
+        
+        self.nav_frame = QFrame()
+        nav_layout = QVBoxLayout()
+        self.nav_frame.setLayout(nav_layout)
+        
+        for i, (text, icon) in enumerate(nav_items):
+            button = self._create_nav_button(text, icon, i)
+            nav_layout.addWidget(button)
+            self.nav_buttons.append(button)
+            self.button_group.addButton(button, i)
             
-            self.agent_cards[agent_id] = card
+        layout.addWidget(self.nav_frame)
         
-        # Configure grid weights
-        for i in range(3):
-            self.agents_grid_frame.grid_columnconfigure(i, weight=1)
-    
-    def _launch_agent(self, agent_id: str):
-        """Launch specific agent"""
-        self.agent_manager.start_agent(agent_id)
-        self.log_viewer.add_log("INFO", f"Launching agent: {agent_id}", "System")
+        # Spacer to push everything to top
+        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        layout.addItem(spacer)
         
-        # Update UI will happen through background task
+        # Set first button as active
+        if self.nav_buttons:
+            self.nav_buttons[0].setChecked(True)
+            
+        # Connect button group signal
+        self.button_group.buttonToggled.connect(self._on_button_toggled)
+        
+    def _create_nav_button(self, text: str, icon: str, index: int) -> QPushButton:
+        """Create a navigation button"""
+        button = QPushButton(f"{icon}  {text}")
+        button.setCheckable(True)
+        button.setMinimumHeight(40)
+        button.setStyleSheet("""
+            QPushButton {
+                text-align: left;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+            QPushButton:checked {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                font-weight: bold;
+            }
+            QPushButton:hover:!checked {
+                background-color: palette(alternate-base);
+            }
+        """)
+        return button
+        
+    def _on_button_toggled(self, button: QPushButton, checked: bool):
+        """Handle navigation button toggle"""
+        if checked:
+            index = self.button_group.id(button)
+            self.current_page = index
+            self.page_changed.emit(index)
+```
+
+### Model-View Components
+
+#### 4. Agent Table Model (`ui/models/agent_table_model.py`)
+```python
+from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont
+from typing import List, Any, Optional
+from datetime import datetime
+from models.agent import Agent, AgentStatus
+from core.database import DatabaseManager
+
+class AgentTableModel(QAbstractTableModel):
+    """Qt model for displaying agent data in table views"""
     
+    data_changed = Signal()
+    
+    def __init__(self, database_manager: DatabaseManager):
+        super().__init__()
+        self.database_manager = database_manager
+        self.agents: List[Agent] = []
+        self.headers = ["Name", "Type", "Status", "Last Run", "Tasks", "Performance"]
+        
+        # Auto-refresh timer
+        self.refresh_timer = QTimer()
+        self.refresh_timer.timeout.connect(self.refresh_data)
+        self.refresh_timer.start(5000)  # Refresh every 5 seconds
+        
+        # Initial data load
+        self.refresh_data()
+        
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.agents)
+        
+    def columnCount(self, parent=QModelIndex()):
+        return len(self.headers)
+        
+    def data(self, index: QModelIndex, role: int):
+        if not index.isValid() or index.row() >= len(self.agents):
+            return None
+            
+        agent = self.agents[index.row()]
+        column = index.column()
+        
+        if role == Qt.DisplayRole:
+            if column == 0:  # Name
+                return agent.name
+            elif column == 1:  # Type
+                return agent.agent_type.replace('_', ' ').title()
+            elif column == 2:  # Status
+                return agent.status.value.title()
+            elif column == 3:  # Last Run
+                if agent.updated_at:
+                    return agent.updated_at.strftime("%Y-%m-%d %H:%M")
+                return "Never"
+            elif column == 4:  # Tasks
+                return f"{agent.completed_tasks}/{agent.total_tasks}"
+            elif column == 5:  # Performance
+                return f"{agent.success_rate:.1f}%"
+                
+        elif role == Qt.BackgroundRole:
+            # Status-based row coloring
+            if agent.status == AgentStatus.ACTIVE:
+                return QBrush(QColor(220, 255, 220))  # Light green
+            elif agent.status == AgentStatus.ERROR:
+                return QBrush(QColor(255, 220, 220))  # Light red
+            elif agent.status == AgentStatus.IDLE:
+                return QBrush(QColor(255, 255, 220))  # Light yellow
+                
+        elif role == Qt.FontRole:
+            if column == 2:  # Status column
+                font = QFont()
+                font.setBold(True)
+                return font
+                
+        elif role == Qt.TextAlignmentRole:
+            if column in [4, 5]:  # Numeric columns
+                return Qt.AlignCenter
+                
+        return None
+        
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self.headers[section]
+        elif role == Qt.FontRole and orientation == Qt.Horizontal:
+            font = QFont()
+            font.setBold(True)
+            return font
+        return None
+        
+    def refresh_data(self):
+        """Refresh agent data from database"""
+        try:
+            with self.database_manager.get_session() as session:
+                new_agents = session.query(Agent).all()
+                
+                if new_agents != self.agents:
+                    self.beginResetModel()
+                    self.agents = new_agents
+                    self.endResetModel()
+                    self.data_changed.emit()
+                    
+        except Exception as e:
+            print(f"Error refreshing agent data: {e}")
+            
+    def get_agent_at_index(self, index: QModelIndex) -> Optional[Agent]:
+        """Get agent object at given index"""
+        if index.isValid() and index.row() < len(self.agents):
+            return self.agents[index.row()]
+        return None
+```
+
+#### 5. Agent Card Widget (`ui/widgets/agent_card_widget.py`)
+```python
+from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
+                             QPushButton, QProgressBar, QGridLayout)
+from PySide6.QtCore import Signal, QTimer
+from PySide6.QtGui import QFont, QPalette
+from typing import Dict, Any
+from models.agent import Agent, AgentStatus
+from datetime import datetime
+
+class AgentCardWidget(QFrame):
+    """Individual agent status card with controls"""
+    
+    start_requested = Signal(str)  # agent_id
+    stop_requested = Signal(str)   # agent_id
+    logs_requested = Signal(str)   # agent_id
+    
+    def __init__(self, agent: Agent):
+        super().__init__()
+        self.agent = agent
+        self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
+        self.setMinimumSize(300, 200)
+        self.setMaximumSize(350, 250)
+        
+        self._setup_ui()
+        self._update_display()
+        
+        # Auto-update timer
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self._update_display)
+        self.update_timer.start(2000)  # Update every 2 seconds
+        
+    def _setup_ui(self):
+        """Set up the card layout"""
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Header with agent name and type
+        header_frame = QFrame()
+        header_layout = QVBoxLayout()
+        header_frame.setLayout(header_layout)
+        
+        self.name_label = QLabel(self.agent.name)
+        name_font = QFont()
+        name_font.setPointSize(14)
+        name_font.setBold(True)
+        self.name_label.setFont(name_font)
+        header_layout.addWidget(self.name_label)
+        
+        self.type_label = QLabel(self.agent.agent_type.replace('_', ' ').title())
+        self.type_label.setStyleSheet("color: palette(text); font-size: 12px;")
+        header_layout.addWidget(self.type_label)
+        
+        layout.addWidget(header_frame)
+        
+        # Status section
+        status_frame = QFrame()
+        status_layout = QHBoxLayout()
+        status_frame.setLayout(status_layout)
+        
+        status_layout.addWidget(QLabel("Status:"))
+        self.status_label = QLabel()
+        self.status_label.setProperty("statusIndicator", True)
+        status_layout.addWidget(self.status_label)
+        status_layout.addStretch()
+        
+        layout.addWidget(status_frame)
+        
+        # Metrics section
+        metrics_frame = QFrame()
+        metrics_layout = QGridLayout()
+        metrics_frame.setLayout(metrics_layout)
+        
+        metrics_layout.addWidget(QLabel("Tasks:"), 0, 0)
+        self.tasks_label = QLabel("0/0")
+        metrics_layout.addWidget(self.tasks_label, 0, 1)
+        
+        metrics_layout.addWidget(QLabel("Success:"), 1, 0)
+        self.success_label = QLabel("0%")
+        metrics_layout.addWidget(self.success_label, 1, 1)
+        
+        metrics_layout.addWidget(QLabel("Last Run:"), 2, 0)
+        self.last_run_label = QLabel("Never")
+        metrics_layout.addWidget(self.last_run_label, 2, 1)
+        
+        layout.addWidget(metrics_frame)
+        
+        # Progress bar for active tasks
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Control buttons
+        button_frame = QFrame()
+        button_layout = QHBoxLayout()
+        button_frame.setLayout(button_layout)
+        
+        self.start_button = QPushButton("Start")
+        self.start_button.clicked.connect(lambda: self.start_requested.emit(self.agent.id))
+        button_layout.addWidget(self.start_button)
+        
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.clicked.connect(lambda: self.stop_requested.emit(self.agent.id))
+        button_layout.addWidget(self.stop_button)
+        
+        self.logs_button = QPushButton("Logs")
+        self.logs_button.clicked.connect(lambda: self.logs_requested.emit(self.agent.id))
+        button_layout.addWidget(self.logs_button)
+        
+        layout.addWidget(button_frame)
+        
+    def _update_display(self):
+        """Update the card display based on current agent state"""
+        # Status indicator
+        status_text = self.agent.status.value.title()
+        self.status_label.setText(status_text)
+        self.status_label.setProperty("status", self._get_status_class())
+        
+        # Update button states
+        if self.agent.status == AgentStatus.ACTIVE:
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        else:
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            self.progress_bar.setVisible(False)
+            
+        # Update metrics
+        self.tasks_label.setText(f"{self.agent.completed_tasks}/{self.agent.total_tasks}")
+        self.success_label.setText(f"{self.agent.success_rate:.1f}%")
+        
+        if self.agent.updated_at:
+            last_run = self.agent.updated_at.strftime("%H:%M")
+            self.last_run_label.setText(last_run)
+        else:
+            self.last_run_label.setText("Never")
+            
+        # Force style update
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
+        
+    def _get_status_class(self) -> str:
+        """Get CSS class name for status"""
+        status_map = {
+            AgentStatus.ACTIVE: "connected",
+            AgentStatus.IDLE: "warning", 
+            AgentStatus.ERROR: "disconnected",
+            AgentStatus.DISABLED: "disconnected"
+        }
+        return status_map.get(self.agent.status, "warning")
+        
+    def update_agent(self, agent: Agent):
+        """Update the agent data and refresh display"""
+        self.agent = agent
+        self._update_display()
+```
+
+### View Components
+
+#### 6. Dashboard View (`ui/views/dashboard_view.py`)
+```python
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                             QFrame, QScrollArea, QGridLayout, QPushButton,
+                             QTableView, QSplitter, QTabWidget)
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QFont
+from ui.models.agent_table_model import AgentTableModel
+from ui.widgets.agent_card_widget import AgentCardWidget
+from ui.widgets.status_indicator_widget import StatusIndicatorWidget
+from ui.widgets.performance_chart_widget import PerformanceChartWidget
+from typing import List, Dict
+
+class DashboardView(QWidget):
+    """Main dashboard view with agent overview and system status"""
+    
+    refresh_requested = Signal()
+    
+    def __init__(self, database_manager, agent_manager):
+        super().__init__()
+        self.database_manager = database_manager
+        self.agent_manager = agent_manager
+        self.agent_cards = {}
+        
+        self._setup_ui()
+        self._setup_timers()
+        
+    def _setup_ui(self):
+        """Set up the dashboard layout"""
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Header section
+        header_frame = self._create_header_section()
+        layout.addWidget(header_frame)
+        
+        # Main content splitter (horizontal)
+        main_splitter = QSplitter(Qt.Horizontal)
+        layout.addWidget(main_splitter)
+        
+        # Left side: Agent cards and table
+        left_widget = self._create_agent_section()
+        main_splitter.addWidget(left_widget)
+        
+        # Right side: System metrics and charts  
+        right_widget = self._create_metrics_section()
+        main_splitter.addWidget(right_widget)
+        
+        # Set initial splitter proportions
+        main_splitter.setSizes([700, 500])
+        
+    def _create_header_section(self):
+        """Create dashboard header with title and controls"""
+        frame = QFrame()
+        frame.setFrameStyle(QFrame.StyledPanel)
+        layout = QHBoxLayout()
+        frame.setLayout(layout)
+        
+        # Title
+        title_label = QLabel("Agent Dashboard")
+        title_font = QFont()
+        title_font.setPointSize(20)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        layout.addWidget(title_label)
+        
+        # Spacer
+        layout.addStretch()
+        
+        # System status indicators
+        self.ollama_status = StatusIndicatorWidget("Ollama", "🔴 Disconnected")
+        layout.addWidget(self.ollama_status)
+        
+        self.gmail_status = StatusIndicatorWidget("Gmail", "🔴 Disconnected")
+        layout.addWidget(self.gmail_status)
+        
+        self.db_status = StatusIndicatorWidget("Database", "🟢 Connected")
+        layout.addWidget(self.db_status)
+        
+        # Control buttons
+        refresh_button = QPushButton("🔄 Refresh")
+        refresh_button.clicked.connect(self._refresh_all)
+        layout.addWidget(refresh_button)
+        
+        start_all_button = QPushButton("▶️ Start All")
+        start_all_button.setProperty("primary", True)
+        start_all_button.clicked.connect(self._start_all_agents)
+        layout.addWidget(start_all_button)
+        
+        return frame
+        
+    def _create_agent_section(self):
+        """Create agent management section"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        
+        # Section header
+        header_label = QLabel("Agent Status")
+        header_font = QFont()
+        header_font.setPointSize(16)
+        header_font.setBold(True)
+        header_label.setFont(header_font)
+        layout.addWidget(header_label)
+        
+        # Tab widget for different views
+        tab_widget = QTabWidget()
+        layout.addWidget(tab_widget)
+        
+        # Cards view (grid of agent cards)
+        cards_scroll = QScrollArea()
+        cards_widget = QWidget()
+        self.cards_layout = QGridLayout()
+        cards_widget.setLayout(self.cards_layout)
+        cards_scroll.setWidget(cards_widget)
+        cards_scroll.setWidgetResizable(True)
+        tab_widget.addTab(cards_scroll, "Cards")
+        
+        # Table view (compact table)
+        self.agent_table_model = AgentTableModel(self.database_manager)
+        self.agent_table = QTableView()
+        self.agent_table.setModel(self.agent_table_model)
+        self.agent_table.setSelectionBehavior(QTableView.SelectRows)
+        self.agent_table.setAlternatingRowColors(True)
+        self.agent_table.resizeColumnsToContents()
+        tab_widget.addTab(self.agent_table, "Table")
+        
+        return widget
+        
+    def _create_metrics_section(self):
+        """Create system metrics and performance section"""
+        widget = QWidget()
+        layout = QVBoxLayout()
+        widget.setLayout(layout)
+        
+        # Section header
+        header_label = QLabel("System Metrics")
+        header_font = QFont()
+        header_font.setPointSize(16)
+        header_font.setBold(True)
+        header_label.setFont(header_font)
+        layout.addWidget(header_label)
+        
+        # Performance charts
+        self.cpu_chart = PerformanceChartWidget("CPU Usage", "Time", "Percent")
+        layout.addWidget(self.cpu_chart)
+        
+        self.memory_chart = PerformanceChartWidget("Memory Usage", "Time", "MB")
+        layout.addWidget(self.memory_chart)
+        
+        # Agent performance summary
+        summary_frame = QFrame()
+        summary_frame.setFrameStyle(QFrame.StyledPanel)
+        summary_layout = QGridLayout()
+        summary_frame.setLayout(summary_layout)
+        
+        summary_layout.addWidget(QLabel("Total Agents:"), 0, 0)
+        self.total_agents_label = QLabel("0")
+        summary_layout.addWidget(self.total_agents_label, 0, 1)
+        
+        summary_layout.addWidget(QLabel("Active Agents:"), 1, 0)
+        self.active_agents_label = QLabel("0")
+        summary_layout.addWidget(self.active_agents_label, 1, 1)
+        
+        summary_layout.addWidget(QLabel("Tasks Today:"), 2, 0)
+        self.tasks_today_label = QLabel("0")
+        summary_layout.addWidget(self.tasks_today_label, 2, 1)
+        
+        layout.addWidget(summary_frame)
+        
+        return widget
+        
+    def _setup_timers(self):
+        """Set up periodic update timers"""
+        # Agent status refresh
+        self.status_timer = QTimer()
+        self.status_timer.timeout.connect(self._update_status_indicators)
+        self.status_timer.start(10000)  # Every 10 seconds
+        
+        # Performance metrics refresh
+        self.metrics_timer = QTimer()
+        self.metrics_timer.timeout.connect(self._update_performance_metrics)
+        self.metrics_timer.start(5000)  # Every 5 seconds
+        
+    def _refresh_all(self):
+        """Refresh all dashboard data"""
+        self._update_agent_cards()
+        self._update_status_indicators()
+        self._update_performance_metrics()
+        self.refresh_requested.emit()
+        
+    def _update_agent_cards(self):
+        """Update agent card widgets"""
+        try:
+            with self.database_manager.get_session() as session:
+                agents = session.query(Agent).all()
+                
+                # Remove old cards
+                for agent_id, card in list(self.agent_cards.items()):
+                    if agent_id not in [a.id for a in agents]:
+                        card.setParent(None)
+                        del self.agent_cards[agent_id]
+                        
+                # Add/update cards
+                row, col = 0, 0
+                for agent in agents:
+                    if agent.id not in self.agent_cards:
+                        card = AgentCardWidget(agent)
+                        card.start_requested.connect(self._start_agent)
+                        card.stop_requested.connect(self._stop_agent)
+                        card.logs_requested.connect(self._view_agent_logs)
+                        self.agent_cards[agent.id] = card
+                        self.cards_layout.addWidget(card, row, col)
+                        
+                        col += 1
+                        if col >= 2:  # 2 cards per row
+                            col = 0
+                            row += 1
+                    else:
+                        self.agent_cards[agent.id].update_agent(agent)
+                        
+        except Exception as e:
+            print(f"Error updating agent cards: {e}")
+            
+    def _start_agent(self, agent_id: str):
+        """Start specific agent"""
+        try:
+            self.agent_manager.start_agent(agent_id)
+            self._update_agent_cards()
+        except Exception as e:
+            print(f"Error starting agent {agent_id}: {e}")
+            
     def _stop_agent(self, agent_id: str):
         """Stop specific agent"""
-        self.agent_manager.stop_agent(agent_id)
-        self.log_viewer.add_log("INFO", f"Stopping agent: {agent_id}", "System")
-    
-    def _launch_all_agents(self):
-        """Launch all registered agents"""
-        for agent_id in self.agent_cards:
-            self._launch_agent(agent_id)
-    
-    def _stop_all_agents(self):
-        """Stop all running agents"""
-        for agent_id in self.agent_cards:
-            self._stop_agent(agent_id)
-    
-    def _view_agent_logs(self, agent_id: str):
-        """View logs for specific agent"""
-        self._show_page("logs")
-        # Could filter logs by agent
-    
-    def _start_background_tasks(self):
-        """Start background update tasks"""
-        # Agent status updater
-        def update_agent_status():
-            while True:
-                try:
-                    # Get latest agent statuses
-                    agents = self.agent_manager.list_agents()
-                    self.update_queue.put(("agents", agents))
-                    time.sleep(2)  # Update every 2 seconds
-                except Exception as e:
-                    print(f"Error updating agent status: {e}")
-        
-        # Timeline updater
-        def update_timeline():
-            while True:
-                try:
-                    # Get agent execution history
-                    timeline_data = self.agent_manager.get_timeline_data()
-                    self.update_queue.put(("timeline", timeline_data))
-                    time.sleep(5)  # Update every 5 seconds
-                except Exception as e:
-                    print(f"Error updating timeline: {e}")
-        
-        # Start threads
-        threading.Thread(target=update_agent_status, daemon=True).start()
-        threading.Thread(target=update_timeline, daemon=True).start()
-        
-        # Process updates in main thread
-        self._process_updates()
-    
-    def _process_updates(self):
-        """Process updates from background tasks"""
         try:
-            while not self.update_queue.empty():
-                update_type, data = self.update_queue.get_nowait()
-                
-                if update_type == "agents":
-                    # Update agent cards
-                    for agent_data in data:
-                        agent_id = agent_data["agent_id"]
-                        if agent_id in self.agent_cards:
-                            self.agent_cards[agent_id].update_agent_data(agent_data)
-                
-                elif update_type == "timeline":
-                    # Update timeline
-                    for agent_name, events in data.items():
-                        self.timeline_view.update_timeline_data(agent_name, events)
-        
-        except:
-            pass
-        
-        # Schedule next update
-        self.after(100, self._process_updates)
-    
-    def _get_cpu_usage(self) -> Tuple[float, float]:
-        """Get current CPU usage for chart"""
-        import psutil
-        return time.time(), psutil.cpu_percent(interval=0.1)
-    
-    def _get_memory_usage(self) -> Tuple[float, float]:
-        """Get current memory usage for chart"""
-        import psutil
-        return time.time(), psutil.Process().memory_info().rss / 1024 / 1024  # MB
+            self.agent_manager.stop_agent(agent_id)
+            self._update_agent_cards()
+        except Exception as e:
+            print(f"Error stopping agent {agent_id}: {e}")
+            
+    def _start_all_agents(self):
+        """Start all available agents"""
+        try:
+            self.agent_manager.start_all_agents()
+            self._update_agent_cards()
+        except Exception as e:
+            print(f"Error starting all agents: {e}")
+```
 
-# Application entry point
-def main():
-    """Run the Agent Admin Dashboard"""
-    app = AgentAdminDashboard()
-    app.mainloop()
+### Advanced UI Components
 
-if __name__ == "__main__":
-    main()
+#### 7. Performance Chart Widget (`ui/widgets/performance_chart_widget.py`)
+```python
+import sys
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtCore import QTimer, QPropertyAnimation, QRect
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QFont
+from typing import List, Tuple
+from collections import deque
+import time
+import psutil
+
+class PerformanceChartWidget(QWidget):
+    """Real-time performance chart using native Qt painting"""
+    
+    def __init__(self, title: str, x_label: str, y_label: str, max_points: int = 100):
+        super().__init__()
+        self.title = title
+        self.x_label = x_label
+        self.y_label = y_label
+        self.max_points = max_points
+        
+        # Data storage
+        self.data_points = deque(maxlen=max_points)
+        self.time_points = deque(maxlen=max_points)
+        
+        self.setMinimumSize(400, 200)
+        self.setMaximumHeight(250)
+        
+        # Update timer
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self._update_data)
+        self.update_timer.start(1000)  # Update every second
+        
+        # Initialize with some data points
+        self._initialize_data()
+        
+    def _initialize_data(self):
+        """Initialize with some sample data"""
+        current_time = time.time()
+        for i in range(10):
+            self.time_points.append(current_time - (10 - i))
+            if self.title == "CPU Usage":
+                self.data_points.append(psutil.cpu_percent(interval=None))
+            else:  # Memory usage
+                memory = psutil.virtual_memory()
+                self.data_points.append(memory.used / 1024 / 1024)  # MB
+                
+    def _update_data(self):
+        """Update chart with new data point"""
+        current_time = time.time()
+        self.time_points.append(current_time)
+        
+        if self.title == "CPU Usage":
+            self.data_points.append(psutil.cpu_percent(interval=None))
+        else:  # Memory usage
+            memory = psutil.virtual_memory()
+            self.data_points.append(memory.used / 1024 / 1024)  # MB
+            
+        self.update()  # Trigger repaint
+        
+    def paintEvent(self, event):
+        """Custom paint event for drawing the chart"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Get widget dimensions
+        rect = self.rect()
+        width = rect.width()
+        height = rect.height()
+        
+        # Margins
+        margin_left = 60
+        margin_right = 20
+        margin_top = 40
+        margin_bottom = 40
+        
+        chart_width = width - margin_left - margin_right
+        chart_height = height - margin_top - margin_bottom
+        
+        # Background
+        painter.fillRect(rect, QColor(240, 240, 240, 50))
+        
+        # Chart area background
+        chart_rect = QRect(margin_left, margin_top, chart_width, chart_height)
+        painter.fillRect(chart_rect, QColor(255, 255, 255, 100))
+        
+        # Draw title
+        painter.setPen(QPen(QColor(0, 0, 0)))
+        title_font = QFont()
+        title_font.setPointSize(12)
+        title_font.setBold(True)
+        painter.setFont(title_font)
+        painter.drawText(width // 2 - 50, 25, self.title)
+        
+        # Draw axes
+        painter.setPen(QPen(QColor(100, 100, 100), 2))
+        # Y-axis
+        painter.drawLine(margin_left, margin_top, margin_left, height - margin_bottom)
+        # X-axis  
+        painter.drawLine(margin_left, height - margin_bottom, width - margin_right, height - margin_bottom)
+        
+        if len(self.data_points) < 2:
+            return
+            
+        # Calculate value range
+        min_val = min(self.data_points)
+        max_val = max(self.data_points)
+        if max_val == min_val:
+            max_val = min_val + 1
+            
+        # Draw grid lines
+        painter.setPen(QPen(QColor(200, 200, 200), 1))
+        for i in range(5):
+            y = margin_top + i * (chart_height // 4)
+            painter.drawLine(margin_left, y, width - margin_right, y)
+            
+        # Draw data line
+        painter.setPen(QPen(QColor(50, 150, 250), 3))
+        
+        points = []
+        for i, (time_val, data_val) in enumerate(zip(self.time_points, self.data_points)):
+            x = margin_left + (i / (len(self.data_points) - 1)) * chart_width
+            y_ratio = (data_val - min_val) / (max_val - min_val)
+            y = margin_top + chart_height - (y_ratio * chart_height)
+            points.append((x, y))
+            
+        # Draw line segments
+        for i in range(len(points) - 1):
+            x1, y1 = points[i]
+            x2, y2 = points[i + 1]
+            painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+            
+        # Draw data points
+        painter.setBrush(QBrush(QColor(50, 150, 250)))
+        for x, y in points:
+            painter.drawEllipse(int(x - 3), int(y - 3), 6, 6)
+            
+        # Draw labels
+        painter.setPen(QPen(QColor(0, 0, 0)))
+        label_font = QFont()
+        label_font.setPointSize(9)
+        painter.setFont(label_font)
+        
+        # Y-axis labels
+        for i in range(5):
+            y = margin_top + i * (chart_height // 4)
+            value = max_val - i * (max_val - min_val) / 4
+            if self.title == "CPU Usage":
+                label = f"{value:.0f}%"
+            else:
+                label = f"{value:.0f}MB"
+            painter.drawText(5, y + 5, label)
+            
+        # Current value display
+        if self.data_points:
+            current_value = self.data_points[-1]
+            if self.title == "CPU Usage":
+                value_text = f"Current: {current_value:.1f}%"
+            else:
+                value_text = f"Current: {current_value:.0f}MB"
+            painter.drawText(width - 150, height - 10, value_text)
+```
+
+#### 8. Log Viewer Component (`ui/widgets/log_viewer_widget.py`)
+```python
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
+                             QTextBrowser, QLineEdit, QComboBox, 
+                             QPushButton, QLabel, QFrame)
+from PySide6.QtCore import QTimer, Signal, QThread
+from PySide6.QtGui import QTextCharFormat, QColor, QFont
+from typing import List, Dict
+from core.logging_manager import LoggingManager, LogEntry, LogLevel
+
+class LogViewerWidget(QWidget):
+    """Real-time log viewer with filtering and search"""
+    
+    def __init__(self, logging_manager: LoggingManager):
+        super().__init__()
+        self.logging_manager = logging_manager
+        self.current_logs: List[LogEntry] = []
+        
+        self._setup_ui()
+        self._setup_timers()
+        self._load_recent_logs()
+        
+    def _setup_ui(self):
+        """Set up log viewer layout"""
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        # Controls header
+        controls_frame = QFrame()
+        controls_frame.setFrameStyle(QFrame.StyledPanel)
+        controls_layout = QHBoxLayout()
+        controls_frame.setLayout(controls_layout)
+        
+        # Log level filter
+        controls_layout.addWidget(QLabel("Level:"))
+        self.level_combo = QComboBox()
+        self.level_combo.addItems(["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.level_combo.currentTextChanged.connect(self._apply_filters)
+        controls_layout.addWidget(self.level_combo)
+        
+        # Search box
+        controls_layout.addWidget(QLabel("Search:"))
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Filter logs...")
+        self.search_input.textChanged.connect(self._apply_filters)
+        controls_layout.addWidget(self.search_input)
+        
+        # Auto-scroll toggle
+        self.auto_scroll_button = QPushButton("🔒 Auto-scroll")
+        self.auto_scroll_button.setCheckable(True)
+        self.auto_scroll_button.setChecked(True)
+        controls_layout.addWidget(self.auto_scroll_button)
+        
+        # Clear button
+        clear_button = QPushButton("🗑️ Clear")
+        clear_button.clicked.connect(self._clear_logs)
+        controls_layout.addWidget(clear_button)
+        
+        layout.addWidget(controls_frame)
+        
+        # Log text display
+        self.log_display = QTextBrowser()
+        self.log_display.setFont(QFont("Consolas", 10))
+        layout.addWidget(self.log_display)
+        
+    def _setup_timers(self):
+        """Set up periodic log refresh"""
+        self.refresh_timer = QTimer()
+        self.refresh_timer.timeout.connect(self._refresh_logs)
+        self.refresh_timer.start(1000)  # Refresh every second
+        
+    def _load_recent_logs(self):
+        """Load recent logs from database"""
+        try:
+            self.current_logs = self.logging_manager.query_logs(limit=1000)
+            self._display_logs()
+        except Exception as e:
+            self.log_display.append(f"Error loading logs: {e}")
+            
+    def _refresh_logs(self):
+        """Refresh logs if new entries available"""
+        try:
+            latest_logs = self.logging_manager.query_logs(limit=50)  # Get latest 50
+            
+            if latest_logs and (not self.current_logs or 
+                              latest_logs[0].timestamp > self.current_logs[0].timestamp):
+                # Add new logs to beginning
+                new_entries = [log for log in latest_logs 
+                             if not self.current_logs or log.timestamp > self.current_logs[0].timestamp]
+                self.current_logs = new_entries + self.current_logs
+                
+                # Limit total logs in memory
+                self.current_logs = self.current_logs[:1000]
+                self._display_logs()
+                
+        except Exception as e:
+            pass  # Silently fail to avoid spam
+            
+    def _display_logs(self):
+        """Display logs in the text browser"""
+        self.log_display.clear()
+        
+        level_filter = self.level_combo.currentText()
+        search_text = self.search_input.text().lower()
+        
+        for log_entry in reversed(self.current_logs):  # Show newest first
+            # Apply filters
+            if level_filter != "ALL" and log_entry.level != level_filter:
+                continue
+                
+            if search_text and search_text not in log_entry.message.lower():
+                continue
+                
+            # Format log entry
+            timestamp_str = log_entry.timestamp.strftime("%H:%M:%S")
+            formatted_entry = f"[{timestamp_str}] {log_entry.level:8} {log_entry.logger_name}: {log_entry.message}"
+            
+            # Add color based on level
+            if log_entry.level == "ERROR" or log_entry.level == "CRITICAL":
+                color = "red"
+            elif log_entry.level == "WARNING":
+                color = "orange" 
+            elif log_entry.level == "INFO":
+                color = "blue"
+            else:
+                color = "gray"
+                
+            self.log_display.append(f'<span style="color: {color};">{formatted_entry}</span>')
+            
+        # Auto-scroll to bottom if enabled
+        if self.auto_scroll_button.isChecked():
+            self.log_display.moveCursor(self.log_display.textCursor().End)
+            
+    def _apply_filters(self):
+        """Apply current filters to log display"""
+        self._display_logs()
+        
+    def _clear_logs(self):
+        """Clear the log display"""
+        self.log_display.clear()
+        self.current_logs.clear()
 ```
 
 ## 🎯 Implementation Guidelines
 
-### Development Workflow
+### Development Workflow for PySide6
 
 1. **Component Development**
-   - Start with base components (Theme Manager, Card)
-   - Build specialized components (AgentCard, LogViewer)
-   - Integrate with core system (AgentManager, DatabaseManager)
-   - Add real-time updates and animations
+   - Start with base application structure (QMainWindow, layouts)
+   - Build specialized widgets (AgentCardWidget, StatusIndicator, etc.)  
+   - Integrate with core system using Qt Model-View architecture
+   - Add real-time updates using QTimer and Qt signals/slots
 
 2. **Testing Strategy**
-   - Unit tests for individual components
-   - Integration tests for component interactions
-   - Performance tests for real-time updates
+   - Unit tests for individual Qt widgets using pytest-qt
+   - Integration tests for model-view interactions
+   - Performance tests for real-time updates and large data sets
    - UI/UX testing with different themes and screen sizes
 
 3. **Performance Optimization**
-   - Use threading for background updates
-   - Implement efficient canvas rendering for timeline
-   - Cache theme colors to avoid repeated lookups
-   - Batch UI updates to prevent flickering
+   - Use Qt threading (QThread) for background updates
+   - Implement efficient model updates with proper signals
+   - Cache Qt resources (icons, stylesheets) to avoid repeated loading
+   - Batch UI updates to prevent excessive repainting
 
-### Best Practices
+### Best Practices for Qt Development
 
 1. **Code Organization**
-   - One component per file
-   - Clear separation of concerns
-   - Consistent naming conventions
-   - Comprehensive docstrings
+   - Follow Qt naming conventions (camelCase for methods, PascalCase for classes)
+   - Separate UI logic from business logic using MVC pattern
+   - Use Qt resource system for assets and stylesheets
+   - Implement proper signal/slot connections for communication
 
 2. **UI/UX Guidelines**
-   - Maintain 8px grid system
-   - Use consistent spacing (5, 10, 15, 20px)
-   - Apply hover effects for interactive elements
-   - Provide visual feedback for all actions
+   - Follow platform-specific design guidelines (Windows, macOS, Linux)
+   - Use native Qt styling and respect system themes
+   - Implement proper keyboard navigation with tab order
+   - Provide visual feedback for all interactive elements
+   - Support high-DPI displays with proper scaling
 
 3. **Real-time Updates**
-   - Use queues for thread-safe communication
-   - Batch updates when possible
-   - Implement graceful degradation
-   - Show loading states during long operations
+   - Use Qt Model-View architecture for efficient data updates
+   - Implement proper thread safety with QMutex when needed
+   - Use QTimer for periodic updates with appropriate intervals
+   - Emit signals for data changes to update multiple views
 
-## 🔧 Configuration
+## 🔧 Configuration for PySide6
 
-### Theme Configuration (`config/ui_settings.json`)
-```json
-{
-  "default_theme": "dark",
-  "enable_animations": true,
-  "update_intervals": {
-    "agent_status": 2000,
-    "timeline": 5000,
-    "charts": 1000,
-    "logs": 100
-  },
-  "layout": {
-    "side_panel_width": 250,
-    "side_panel_collapsed_width": 60,
-    "default_card_corner_radius": 15,
-    "default_button_corner_radius": 8
-  },
-  "performance": {
-    "max_log_lines": 1000,
-    "chart_max_points": 100,
-    "timeline_hours_default": 24
-  }
-}
+### Theme Configuration (`ui/styles/themes.yaml`)
+```yaml
+themes:
+  dark:
+    primary: "#6366f1"
+    primary_hover: "#5855eb"
+    success: "#10b981"
+    warning: "#f59e0b"
+    error: "#ef4444"
+    background: "#1e1e1e"
+    surface: "#2d2d2d"
+    surface_variant: "#3a3a3a"
+    text: "#ffffff"
+    text_secondary: "#9ca3af"
+    border: "#4a5568"
+  light:
+    primary: "#3b82f6"
+    primary_hover: "#2563eb"
+    success: "#059669"
+    warning: "#d97706"
+    error: "#dc2626"
+    background: "#f9fafb"
+    surface: "#ffffff"
+    surface_variant: "#f3f4f6"
+    text: "#111827"
+    text_secondary: "#6b7280"
+    border: "#d1d5db"
+
+layout:
+  side_panel_width: 200
+  card_min_width: 300
+  card_max_width: 350
+  spacing_small: 8
+  spacing_medium: 16
+  spacing_large: 24
+  border_radius: 8
+
+performance:
+  refresh_interval_ms: 5000
+  chart_update_interval_ms: 1000
+  max_log_entries: 1000
+  chart_max_points: 100
 ```
 
-## 📦 Dependencies
+## 📦 Dependencies for PySide6
 
 ```python
-# requirements.txt additions
-customtkinter>=5.2.0
-matplotlib>=3.7.0
-psutil>=5.9.0
-Pillow>=10.0.0  # For image support in CustomTkinter
+# requirements.txt additions for PySide6 UI
+PySide6>=6.9.1
+PySide6-Essentials>=6.9.1
+PySide6-Addons>=6.9.1
 ```
 
-## 🔧 Ollama Setup Check
+## 🔧 Qt Standard Paths Integration for Native Desktop Applications
 
-### Ollama Setup Manager (`ui/components/ollama_setup.py`)
+The RS Personal Agent uses Qt's QStandardPaths for proper cross-platform database and configuration storage, following desktop application best practices.
 
-The UI includes an automatic Ollama setup check that runs on startup and can be triggered manually from the UI.
+### Qt Standard Paths Implementation
 
+**Production Storage Locations (using QStandardPaths.AppLocalDataLocation):**
+- **Windows**: `%LOCALAPPDATA%\Roostership\RSPersonalAgent\`
+- **macOS**: `~/Library/Application Support/RSPersonalAgent/`  
+- **Linux**: `~/.local/share/RSPersonalAgent/`
+
+**Development Mode**: Uses `./data/` when `RSPA_DATABASE_DEV_MODE=true`
+
+**Qt-Native Implementation:**
 ```python
-import customtkinter as ctk
-import subprocess
-import threading
-import platform
-import requests
-from typing import Optional, Callable
-from ui.components.theme_manager import theme_manager
-from ui.components.card import Card
+from PySide6.QtCore import QStandardPaths, QDir
+from pathlib import Path
 
-class OllamaSetupDialog(ctk.CTkToplevel):
-    """Dialog for Ollama setup and configuration"""
-    
-    def __init__(self, parent, on_complete: Optional[Callable] = None):
-        super().__init__(parent)
-        
-        self.title("Ollama Setup")
-        self.geometry("600x400")
-        self.resizable(False, False)
-        self.transient(parent)
-        
-        self.on_complete = on_complete
-        self.theme = theme_manager.get_theme()
-        self.configure(fg_color=self.theme["bg_color"])
-        
-        self._setup_ui()
-        self._check_ollama_status()
-    
-    def _setup_ui(self):
-        """Set up the dialog UI"""
-        # Header
-        header = ctk.CTkLabel(
-            self,
-            text="Ollama Setup & Configuration",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        header.pack(pady=(20, 10))
-        
-        # Status card
-        self.status_card = Card(
-            self,
-            title="Ollama Status",
-            width=550,
-            height=100
-        )
-        self.status_card.pack(pady=10)
-        
-        # Status elements
-        self.status_frame = ctk.CTkFrame(
-            self.status_card.content_frame,
-            fg_color="transparent"
-        )
-        self.status_frame.pack(fill="both", expand=True)
-        
-        self.status_label = ctk.CTkLabel(
-            self.status_frame,
-            text="Checking Ollama status...",
-            font=ctk.CTkFont(size=14)
-        )
-        self.status_label.pack(pady=5)
-        
-        self.status_indicator = ctk.CTkLabel(
-            self.status_frame,
-            text="⚪",
-            font=ctk.CTkFont(size=20)
-        )
-        self.status_indicator.pack()
-        
-        # Progress frame
-        self.progress_frame = ctk.CTkFrame(
-            self,
-            fg_color="transparent",
-            height=150
-        )
-        self.progress_frame.pack(fill="x", pady=20)
-        self.progress_frame.pack_propagate(False)
-        
-        # Progress bar
-        self.progress_bar = ctk.CTkProgressBar(
-            self.progress_frame,
-            width=500,
-            height=20,
-            corner_radius=10
-        )
-        self.progress_bar.pack(pady=(0, 10))
-        self.progress_bar.set(0)
-        
-        # Progress label
-        self.progress_label = ctk.CTkLabel(
-            self.progress_frame,
-            text="",
-            font=ctk.CTkFont(size=12),
-            text_color=self.theme["text_secondary"]
-        )
-        self.progress_label.pack()
-        
-        # Action buttons
-        button_frame = ctk.CTkFrame(self, fg_color="transparent")
-        button_frame.pack(pady=20)
-        
-        self.action_button = ctk.CTkButton(
-            button_frame,
-            text="Start Ollama",
-            width=150,
-            height=40,
-            corner_radius=8,
-            command=self._start_ollama,
-            state="disabled"
-        )
-        self.action_button.pack(side="left", padx=5)
-        
-        self.close_button = ctk.CTkButton(
-            button_frame,
-            text="Close",
-            width=100,
-            height=40,
-            corner_radius=8,
-            fg_color=self.theme["fg_color"],
-            hover_color=self.theme["hover_color"],
-            text_color=self.theme["text_color"],
-            command=self.destroy
-        )
-        self.close_button.pack(side="left", padx=5)
-    
-    def _check_ollama_status(self):
-        """Check Ollama installation and running status"""
-        def check():
-            try:
-                # Check if Ollama is installed
-                result = subprocess.run(
-                    ["ollama", "--version"],
-                    capture_output=True,
-                    text=True
-                )
-                
-                if result.returncode != 0:
-                    self._update_status("Not Installed", "error")
-                    self._show_install_instructions()
-                    return
-                
-                # Check if Ollama service is running
-                try:
-                    response = requests.get("http://localhost:11434/api/tags", timeout=2)
-                    if response.status_code == 200:
-                        self._update_status("Running", "success")
-                        self._check_model_status()
-                    else:
-                        self._update_status("Not Running", "warning")
-                        self.action_button.configure(
-                            text="Start Ollama",
-                            state="normal",
-                            command=self._start_ollama
-                        )
-                except requests.RequestException:
-                    self._update_status("Not Running", "warning")
-                    self.action_button.configure(
-                        text="Start Ollama",
-                        state="normal",
-                        command=self._start_ollama
-                    )
-                    
-            except FileNotFoundError:
-                self._update_status("Not Installed", "error")
-                self._show_install_instructions()
-        
-        threading.Thread(target=check, daemon=True).start()
-    
-    def _update_status(self, status: str, level: str):
-        """Update status display"""
-        colors = {
-            "success": self.theme["success_color"],
-            "warning": self.theme["warning_color"],
-            "error": self.theme["error_color"],
-            "info": self.theme["accent_color"]
-        }
-        
-        symbols = {
-            "success": "🟢",
-            "warning": "🟡", 
-            "error": "🔴",
-            "info": "🔵"
-        }
-        
-        self.status_label.configure(text=f"Ollama Status: {status}")
-        self.status_indicator.configure(
-            text=symbols.get(level, "⚪"),
-            text_color=colors.get(level, self.theme["text_color"])
-        )
-    
-    def _show_install_instructions(self):
-        """Show installation instructions"""
-        self.progress_label.configure(
-            text="Ollama is not installed. Please install from https://ollama.com/download"
+class DatabaseManager:
+    def __init__(self):
+        # Use Qt's platform-appropriate app data location
+        app_data_location = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.AppLocalDataLocation
         )
         
-        self.action_button.configure(
-            text="Open Download Page",
-            state="normal",
-            command=lambda: self._open_url("https://ollama.com/download")
-        )
-    
-    def _start_ollama(self):
-        """Start Ollama service"""
-        self.action_button.configure(state="disabled")
-        self.progress_label.configure(text="Starting Ollama service...")
+        # Create directory using Qt's directory management
+        app_dir = QDir(app_data_location)
+        if not app_dir.exists():
+            app_dir.mkpath(".")
+            
+        # Set database path
+        self.db_path = Path(app_data_location) / "main.db"
+        self.cache_path = Path(app_data_location) / "cache.db"
+        self.backup_dir = Path(app_data_location) / "backups"
         
-        def start():
-            try:
-                if platform.system() == "Windows":
-                    subprocess.Popen(["ollama", "serve"], shell=True)
-                else:
-                    subprocess.Popen(["ollama", "serve"])
-                
-                # Wait for service to start
-                import time
-                time.sleep(3)
-                
-                self._check_ollama_status()
-                
-            except Exception as e:
-                self.progress_label.configure(
-                    text=f"Failed to start Ollama: {str(e)}"
-                )
-                self.action_button.configure(state="normal")
-        
-        threading.Thread(target=start, daemon=True).start()
-    
-    def _check_model_status(self):
-        """Check if llama4:maverick model is installed"""
-        self.progress_label.configure(text="Checking model status...")
-        
-        def check():
-            try:
-                # Get list of installed models
-                response = requests.get("http://localhost:11434/api/tags")
-                if response.status_code == 200:
-                    models = response.json().get("models", [])
-                    model_names = [m.get("name", "") for m in models]
-                    
-                    if "llama4:maverick" in model_names:
-                        self._update_status("Ready", "success")
-                        self.progress_label.configure(
-                            text="Llama 4 Maverick model is installed and ready"
-                        )
-                        self.action_button.configure(
-                            text="Complete",
-                            state="normal",
-                            command=self._complete_setup
-                        )
-                    else:
-                        self.progress_label.configure(
-                            text="Llama 4 Maverick model not found"
-                        )
-                        self.action_button.configure(
-                            text="Install Model",
-                            state="normal",
-                            command=self._install_model
-                        )
-                        
-            except Exception as e:
-                self.progress_label.configure(
-                    text=f"Error checking models: {str(e)}"
-                )
-        
-        threading.Thread(target=check, daemon=True).start()
-    
-    def _install_model(self):
-        """Install llama4:maverick model"""
-        self.action_button.configure(state="disabled")
-        self.progress_label.configure(text="Installing Llama 4 Maverick model...")
-        self.progress_bar.set(0)
-        
-        def install():
-            try:
-                process = subprocess.Popen(
-                    ["ollama", "pull", "llama4:maverick"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    universal_newlines=True,
-                    bufsize=1
-                )
-                
-                # Parse progress from output
-                for line in process.stdout:
-                    if "pulling" in line.lower():
-                        # Extract progress percentage if available
-                        if "%" in line:
-                            try:
-                                percent_str = line.split("%")[0].split()[-1]
-                                percent = float(percent_str) / 100
-                                self.progress_bar.set(percent)
-                                self.progress_label.configure(
-                                    text=f"Downloading: {percent_str}%"
-                                )
-                            except:
-                                pass
-                    elif "success" in line.lower():
-                        self.progress_bar.set(1.0)
-                        self.progress_label.configure(text="Model installed successfully!")
-                
-                process.wait()
-                
-                if process.returncode == 0:
-                    self._update_status("Ready", "success")
-                    self.action_button.configure(
-                        text="Complete",
-                        state="normal",
-                        command=self._complete_setup
-                    )
-                else:
-                    self.progress_label.configure(
-                        text="Failed to install model. Please try again."
-                    )
-                    self.action_button.configure(state="normal")
-                    
-            except Exception as e:
-                self.progress_label.configure(
-                    text=f"Error installing model: {str(e)}"
-                )
-                self.action_button.configure(state="normal")
-        
-        threading.Thread(target=install, daemon=True).start()
-    
-    def _complete_setup(self):
-        """Complete setup and close dialog"""
-        if self.on_complete:
-            self.on_complete()
-        self.destroy()
-    
-    def _open_url(self, url: str):
-        """Open URL in default browser"""
-        import webbrowser
-        webbrowser.open(url)
-
-class OllamaStatusWidget(ctk.CTkFrame):
-    """Widget to show Ollama connection status in the main UI"""
-    
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-        
-        self.theme = theme_manager.get_theme()
-        self.configure(fg_color="transparent")
-        
-        self._setup_ui()
-        self._start_monitoring()
-    
-    def _setup_ui(self):
-        """Set up status widget UI"""
-        self.status_label = ctk.CTkLabel(
-            self,
-            text="● Ollama: Checking...",
-            font=ctk.CTkFont(size=11),
-            text_color=self.theme["text_secondary"]
-        )
-        self.status_label.pack(side="left", padx=5)
-        
-        self.check_button = ctk.CTkButton(
-            self,
-            text="Setup",
-            width=60,
-            height=24,
-            corner_radius=6,
-            font=ctk.CTkFont(size=11),
-            command=self._open_setup_dialog
-        )
-        self.check_button.pack(side="left", padx=5)
-    
-    def _start_monitoring(self):
-        """Start monitoring Ollama status"""
-        def monitor():
-            while True:
-                try:
-                    response = requests.get("http://localhost:11434/api/tags", timeout=1)
-                    if response.status_code == 200:
-                        models = response.json().get("models", [])
-                        model_names = [m.get("name", "") for m in models]
-                        
-                        if "llama4:maverick" in model_names:
-                            self._update_status("Ready", "success")
-                        else:
-                            self._update_status("Model Missing", "warning")
-                    else:
-                        self._update_status("Error", "error")
-                except requests.RequestException:
-                    self._update_status("Not Running", "error")
-                
-                import time
-                time.sleep(10)  # Check every 10 seconds
-        
-        threading.Thread(target=monitor, daemon=True).start()
-    
-    def _update_status(self, status: str, level: str):
-        """Update status display"""
-        colors = {
-            "success": self.theme["success_color"],
-            "warning": self.theme["warning_color"],
-            "error": self.theme["error_color"]
-        }
-        
-        self.status_label.configure(
-            text=f"● Ollama: {status}",
-            text_color=colors.get(level, self.theme["text_secondary"])
-        )
-        
-        # Show/hide setup button based on status
-        if level != "success":
-            self.check_button.pack(side="left", padx=5)
-        else:
-            self.check_button.pack_forget()
-    
-    def _open_setup_dialog(self):
-        """Open Ollama setup dialog"""
-        dialog = OllamaSetupDialog(
-            self.winfo_toplevel(),
-            on_complete=lambda: self._start_monitoring()
-        )
-        dialog.grab_set()
-
-# Integration in main dashboard
-def integrate_ollama_check(status_bar: ctk.CTkFrame):
-    """Add Ollama status widget to the status bar"""
-    ollama_widget = OllamaStatusWidget(status_bar)
-    ollama_widget.pack(side="right", padx=10)
+    def get_database_url(self) -> str:
+        """Get SQLAlchemy database URL"""
+        return f"sqlite:///{self.db_path}"
 ```
 
-### Usage in Main Application
+**Cross-Platform Storage Locations with Qt Application Setup:**
+Requires proper Qt application configuration:
+```python
+QCoreApplication.setOrganizationName("Roostership")
+QCoreApplication.setApplicationName("RSPersonalAgent")
+```
 
-To integrate the Ollama setup check into the main application:
+This produces:
+- **Windows**: `%LOCALAPPDATA%\Roostership\RSPersonalAgent\`
+- **macOS**: `~/Library/Application Support/RSPersonalAgent/`  
+- **Linux**: `~/.local/share/RSPersonalAgent/`
 
-1. **Automatic Check on Startup**: The application automatically checks Ollama status when launched
-2. **Manual Check**: Users can click the "Setup" button in the status bar to open the setup dialog
-3. **Visual Indicators**: Color-coded status indicators show the current state
-4. **Progress Tracking**: When downloading models, a progress bar shows download status
-5. **Cross-Platform Support**: Works on Windows, macOS, and Linux
+**Benefits of Qt Standard Paths:**
+1. **Platform Compliance**: Follows OS-specific conventions (Registry on Windows, plist on macOS)
+2. **User Separation**: Proper isolation between user accounts
+3. **Professional Integration**: Works with system backup tools and OS-specific behaviors
+4. **Permissions**: Guarantees write permissions in returned locations
+5. **Future Compatibility**: Handles OS changes automatically
+6. **Deployment Independence**: Database location independent of executable location
 
-The setup dialog handles:
-- Checking if Ollama is installed
-- Starting the Ollama service if not running
-- Verifying the llama4:maverick model is installed
-- Downloading the model with progress tracking
-- Providing clear status updates throughout the process
+**Native Desktop Application Benefits:**
+- System tray integration capabilities
+- Native theming and OS integration  
+- Professional desktop packaging and distribution
+- Qt Model-View architecture for responsive UI updates
+- Cross-platform keyboard shortcuts and accessibility support
 
-## 🚀 Next Steps
+This implementation follows Qt documentation recommendations and ensures professional desktop application behavior across Windows, macOS, and Linux platforms.
 
-1. **Extended Features**
-   - Agent scheduling interface
-   - Drag-and-drop agent configuration
-   - Export functionality for logs and reports
-   - Advanced filtering and search
-   - Keyboard shortcuts
+## 🚀 Next Steps for PySide6 Implementation
 
-2. **Integration Points**
-   - WebSocket support for real-time updates
-   - REST API for external monitoring
-   - Plugin system for custom visualizations
-   - Integration with notification systems
+1. **Core Qt Infrastructure**
+   - Implement QApplication setup and main window
+   - Create base widget classes and theme management
+   - Set up Model-View architecture for agent data
+   - Implement Qt-based configuration system
 
-3. **Advanced Visualizations**
-   - Agent dependency graphs
-   - Resource allocation heatmaps
-   - Performance trend analysis
-   - Predictive scheduling suggestions
+2. **Agent Management Interface**
+   - Build agent card widgets and table views
+   - Create agent control dialogs and forms
+   - Implement real-time status updates using Qt signals
+   - Add agent configuration and editing capabilities
 
-This comprehensive UI design provides a modern, efficient, and user-friendly interface for managing AI agents in the RS Personal Assistant system, with a focus on real-time monitoring, intuitive controls, and visual appeal.
+3. **Advanced Features**
+   - Performance monitoring with native Qt charts
+   - Log viewer with filtering and search capabilities
+   - System tray integration for background operation
+   - Export functionality using Qt file dialogs
+
+This comprehensive PySide6-based UI design provides a professional, native desktop interface that fully integrates with the existing core infrastructure while following Qt best practices and modern desktop application standards.

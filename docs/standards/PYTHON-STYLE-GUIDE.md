@@ -1,6 +1,6 @@
-# Python Style Guide for RS Personal Assistant
+# Python Style Guide for RS Personal Agent
 
-This style guide is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) with specific adaptations for the RS Personal Assistant project.
+This style guide is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) with specific adaptations for the RS Personal Agent project.
 
 ## 1. Python Language Rules
 
@@ -141,7 +141,7 @@ def batch_process(
     pass
 ```
 
-## 3. RS Personal Assistant Specific Guidelines
+## 3. RS Personal Agent Specific Guidelines
 
 ### 3.1 Agent Development
 
@@ -249,7 +249,7 @@ Create specific exception classes:
 
 ```python
 class RSPAError(Exception):
-    """Base exception for RS Personal Assistant."""
+    """Base exception for RS Personal Agent."""
     pass
 
 class AgentError(RSPAError):

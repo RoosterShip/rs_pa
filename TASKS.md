@@ -1,21 +1,21 @@
-# Implementation Tasks for RS Personal Assistant
+# Implementation Tasks for RS Personal Agent
 
 ## 🎯 Project Overview
 
-This document outlines all implementation tasks required to build the RS Personal Assistant system using an **iterative UI-first development strategy**. Rather than building large chunks at once, each phase delivers a working application with incrementally added features.
+This document outlines all implementation tasks required to build the RS Personal Agent as a **native desktop application using PySide6**. The system uses an **iterative UI-first development strategy** where each phase delivers a working desktop application with incrementally added features.
 
 ## 🔄 Iterative Development Strategy
 
 **Core Philosophy**: Build pieces at a time with immediate visual feedback at each step:
-1. **UI First**: Create visible interface elements that users can interact with
-2. **Framework Second**: Add the underlying framework code to support the UI
+1. **Native UI First**: Create visible desktop interface elements that users can interact with
+2. **Framework Second**: Add the underlying framework code to support the UI components
 3. **Agent Integration Last**: Connect real AI agents when the foundation is solid
 
 This approach ensures:
-- ✅ Progress is visible at every step  
-- ✅ Changes can be made without major redesign
-- ✅ Working application is maintained throughout development
-- ✅ Testing and validation happen continuously
+- ✅ Progress is visible at every step with a working desktop app
+- ✅ Changes can be made without major redesign 
+- ✅ Native desktop application is maintained throughout development
+- ✅ Testing and validation happen continuously with real UI interaction
 
 ## 📋 Task Categories
 
@@ -26,71 +26,83 @@ This approach ensures:
 
 ---
 
-## 🖥️ Phase 1: Basic Dashboard & Project Setup (P0)
+## 🖥️ Phase 1: Native Desktop Setup & Basic Window (P0)
 
-### Task 1.1: Project Setup with Basic Streamlit Dashboard
+### Task 1.1: Project Setup with Basic PySide6 Desktop Window
 **Priority**: P0  
-**Component**: Infrastructure + UI  
-**Estimated Time**: 3 hours
+**Component**: Infrastructure + Native UI  
+**Estimated Time**: 4 hours
 
-**Description**: Set up project structure with a basic working Streamlit dashboard that can be immediately run and viewed.
+**Description**: Set up project structure with a basic working PySide6 desktop application that creates a native window and can be immediately run and viewed.
 
 **Pre-requisites**:
 - Install UV package manager: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Install Python 3.9+ and Git
 
 **Acceptance Criteria**:
-- [ ] Create basic directory structure 
-- [ ] Set up `pyproject.toml` with essential dependencies (Streamlit, basic libraries)
-- [ ] Configure `requirements.txt` for UV
-- [ ] Create `.gitignore` with Python exclusions
-- [ ] Create minimal `main.py` that launches a Streamlit dashboard
-- [ ] Dashboard shows "RS Personal Assistant" title and placeholder content
-- [ ] Add basic `.env.example` file
+- [ ] Create basic directory structure with UI architecture 
+- [ ] Set up `pyproject.toml` with PySide6 6.9.1 dependencies
+- [ ] Configure `requirements.txt` and `requirements-dev.txt` for UV
+- [ ] Create `.gitignore` with Python and Qt exclusions
+- [ ] Create minimal `main.py` that launches a PySide6 QApplication
+- [ ] Create basic `ui/main_window.py` with QMainWindow
+- [ ] Window shows "RS Personal Agent" title and basic layout
+- [ ] Add menu bar with File/Exit functionality
+- [ ] Add status bar showing "Ready" message
+- [ ] Add comprehensive `.env.example` file for desktop settings with `RSPA_APP_NAME`, `RSPA_APP_VERSION`, `RSPA_DEBUG`, `RSPA_DATABASE_DEV_MODE` variables
 - [ ] Set up UV virtual environment
-- [ ] Successfully run `streamlit run main.py` and view dashboard
+- [ ] Successfully run `python main.py` and see native desktop window
 
-**Result**: A minimal but working application that can be launched and viewed in the browser.
+**Result**: A minimal but working native desktop application with proper window management.
 
 **Files to Create**:
-- `pyproject.toml`
-- `requirements.txt`
+- `pyproject.toml` (with PySide6 dependencies)
+- `requirements.txt` (production dependencies)
+- `requirements-dev.txt` (development dependencies including pytest-qt)
 - `.gitignore`
-- `.env.example`
-- `main.py`
-- Basic directory structure
+- `.env.example` (desktop-focused settings)
+- `main.py` (QApplication entry point)
+- `ui/__init__.py`
+- `ui/main_window.py` (Main QMainWindow class)
+- Basic directory structure for MVC architecture
 
-### Task 1.2: Enhanced Dashboard with Mock Agent Cards
+### Task 1.2: Native Dashboard with Mock Agent Table
 **Priority**: P0  
-**Component**: UI  
-**Estimated Time**: 4 hours
+**Component**: Native UI  
+**Estimated Time**: 5 hours
 
-**Description**: Create a proper dashboard layout with mock agent cards to visualize the interface before implementing backend functionality.
+**Description**: Create a professional dashboard layout using Qt widgets with a table view showing mock agent data to visualize the interface before implementing backend functionality.
 
 **Pre-requisites**:
-- Task 1.1 completed (basic Streamlit setup)
+- Task 1.1 completed (basic PySide6 window setup)
 
 **Acceptance Criteria**:
-- [ ] Implement dashboard layout with header and main content area
-- [ ] Create 3-4 mock agent cards showing different states:
-  - "Email Scanner" - Running state
-  - "Task Manager" - Idle state  
-  - "Calendar Agent" - Error state
-  - "Document Processor" - Disabled state
-- [ ] Each card shows: name, status, last execution time, action buttons
-- [ ] Add side navigation panel with menu items
-- [ ] Implement basic styling and colors
-- [ ] Cards are clickable and show status updates
-- [ ] All buttons are functional (even if they just show messages)
+- [ ] Create `ui/views/dashboard_view.py` with proper QWidget layout
+- [ ] Implement professional header section with title and refresh button
+- [ ] Add system status indicators for Ollama, Gmail, and Database with colored status dots
+- [ ] Create agent management section with QTableView
+- [ ] Implement `ui/models/agent_table_model.py` for Qt Model-View architecture
+- [ ] Create `ui/widgets/status_indicator_widget.py` for service status display
+- [ ] Mock agent data showing different states:
+  - "Email Scanner" - Running state (green)
+  - "Task Manager" - Idle state (yellow)
+  - "Calendar Agent" - Error state (red)
+  - "Document Processor" - Disabled state (gray)
+- [ ] Table shows: name, type, status, last run time, with proper row coloring
+- [ ] Add right-click context menu for agent actions
+- [ ] Implement window resize handling and proper layout management
+- [ ] All interactions work with mock data and show meaningful feedback
 
-**Result**: A visually complete dashboard that looks like a working agent management system.
+**Result**: A visually complete native desktop dashboard with professional Qt styling.
 
 **Files to Create**:
-- `ui/__init__.py`
-- `ui/dashboard.py`
-- `ui/components/__init__.py`
-- `ui/components/agent_card.py`
-- Enhanced `main.py`
+- `ui/views/__init__.py`
+- `ui/views/dashboard_view.py` (Main dashboard QWidget)
+- `ui/models/__init__.py`  
+- `ui/models/agent_table_model.py` (QAbstractTableModel for agents)
+- `ui/widgets/__init__.py`
+- `ui/widgets/status_indicator_widget.py` (Custom status display)
+- Enhanced `ui/main_window.py` to include dashboard view
 
 ---
 
@@ -99,434 +111,610 @@ This approach ensures:
 **Component**: Framework  
 **Estimated Time**: 3 hours
 
-**Description**: Create basic SQLAlchemy models and populate with mock data to support the dashboard.
+**Description**: Create basic SQLAlchemy models and populate with mock data to support the native desktop dashboard table views.
 
 **Pre-requisites**:
-- Task 1.2 completed (dashboard UI)
+- Task 1.2 completed (native dashboard UI with Qt table views)
 
 **Acceptance Criteria**:
-- [ ] Add SQLAlchemy dependencies to requirements
-- [ ] Create `models/base.py` with BaseModel class
-- [ ] Create `models/agent.py` with basic Agent model
-- [ ] Set up simple database manager in `core/database.py`
-- [ ] Create and run initial Alembic migration
-- [ ] Populate database with mock agent data
-- [ ] Connect dashboard to real database data (replace mock cards)
-- [ ] Dashboard now shows real agents from database
+- [ ] Add SQLAlchemy dependencies to requirements (already in requirements.txt)
+- [ ] Create `models/base.py` with BaseModel class and SQLAlchemy setup
+- [ ] Create `models/agent.py` with Agent model (id, name, type, status, last_run, config)
+- [ ] Set up database manager in `core/database.py` with session management
+- [ ] Configure logging system using `RSPA_LOGGING_LEVEL`, `RSPA_LOGGING_LOG_TO_FILE`, `RSPA_LOGGING_LOG_TO_CONSOLE`, `RSPA_LOGGING_LOG_TO_DATABASE`
+- [ ] Create and run initial Alembic migration for Agent table
+- [ ] Populate database with mock agent data (4-5 sample agents)
+- [ ] Configure database settings using `RSPA_DATABASE_URL`, `RSPA_DATABASE_BACKUP_COUNT`, `RSPA_DATABASE_BACKUP_BEFORE_MIGRATION`
+- [ ] Update `ui/models/agent_table_model.py` to load real data from database
+- [ ] Connect Qt table view to database through the model
+- [ ] Verify table updates when database changes
 
-**Result**: Dashboard is now backed by a real database with sample data.
+**Result**: Native desktop dashboard table now displays real agent data from SQLAlchemy database.
 
 **Files to Create**:
 - `models/__init__.py`
-- `models/base.py`
-- `models/agent.py`
+- `models/base.py` (SQLAlchemy declarative base)
+- `models/agent.py` (Agent model class)
 - `core/__init__.py`
-- `core/database.py`
-- `alembic.ini`
-- `alembic/env.py`
-- `alembic/versions/001_initial_agents.py`
+- `core/database.py` (Database session management)
+- `alembic.ini` (Alembic configuration)
+- `alembic/env.py` (Migration environment)
+- `alembic/versions/001_initial_agents.py` (Initial migration)
 
 ---
 
-## 📧 Phase 2: Email Scanner UI & Mock Integration (P0)
+## 📧 Phase 2: Reimbursement Agent Native UI & Mock Integration (P0)
 
-### Task 2.1: Email Scanner Dashboard Page with Mock Data
+### Task 2.1: Reimbursement Agent Native Page with Mock Data
 **Priority**: P0  
-**Component**: UI  
-**Estimated Time**: 4 hours
+**Component**: Native UI  
+**Estimated Time**: 5 hours
 
-**Description**: Create a dedicated page for email scanning with mock results to demonstrate the full workflow.
+**Description**: Create a dedicated native Qt widget page for reimbursement processing with mock results to demonstrate the full desktop workflow.
 
 **Pre-requisites**:
 - Task 1.3 completed (database models and mock data)
 
 **Acceptance Criteria**:
-- [ ] Add "Email Scanner" page to navigation menu
-- [ ] Create email scanning interface with:
-  - Date range selector
-  - "Scan Emails" button
-  - Progress indicator/spinner
-  - Results display area
-- [ ] Mock scanning results showing:
-  - List of processed emails
-  - Detected bills with amounts and vendors
-  - Summary statistics (total found, total amount)
-  - Export to CSV functionality (downloads mock data)
-- [ ] Add filtering and sorting for results
-- [ ] Create detailed view modal for individual emails
-- [ ] All interactions work with mock data
+- [ ] Add "Reimbursement Agent" tab to main window's QTabWidget navigation
+- [ ] Create `ui/views/reimbursement_view.py` with QWidget-based interface:
+  - QDateEdit widgets for date range selection
+  - QPushButton "Scan for Expenses" with proper styling
+  - QProgressBar and QLabel for progress indication
+  - QTableView for results display with custom model
+- [ ] Create `ui/models/reimbursement_results_model.py` for Qt Model-View architecture
+- [ ] Mock scanning results showing in table:
+  - Processed email subjects, senders, dates
+  - Detected expense amounts and vendor names
+  - Row-based coloring for different result types (reimbursable vs non-reimbursable)
+- [ ] Add summary statistics panel with QLabel widgets
+- [ ] Create export functionality using QFileDialog for CSV/PDF selection
+- [ ] Add filtering with QLineEdit and sorting capabilities
+- [ ] Create expense detail dialog using QDialog for individual expense view
+- [ ] All interactions work with mock data and show native desktop feedback
 
-**Result**: Complete email scanner interface that demonstrates the full user workflow.
+**Result**: Professional native desktop reimbursement interface with Qt widgets and proper desktop UX.
 
 **Files to Create**:
-- `ui/pages/email_scanner.py`
-- `ui/components/email_results.py`
-- `ui/components/progress_indicator.py`
+- `ui/views/reimbursement_view.py` (Main reimbursement agent QWidget)
+- `ui/models/reimbursement_results_model.py` (QAbstractTableModel for results)
+- `ui/widgets/progress_widget.py` (Custom progress indicator)
+- `ui/dialogs/expense_detail_dialog.py` (QDialog for expense details)
+- Enhanced `ui/main_window.py` to include reimbursement agent tab
 
 ---
 
-### Task 2.2: Basic Gmail Connection and Ollama Setup UI
+### Task 2.2: Basic Gmail Connection and Ollama Setup with Native UI
 **Priority**: P0  
-**Component**: Framework  
-**Estimated Time**: 5 hours
-
-**Description**: Add Gmail authentication and Ollama connection functionality with status indicators.
-
-**Pre-requisites**:
-- Task 2.1 completed (email scanner UI)
-
-**Acceptance Criteria**:
-- [ ] Add Gmail API and Ollama dependencies to requirements
-- [ ] Create `core/gmail_service.py` with basic OAuth2 setup
-- [ ] Create `core/llm_manager.py` with Ollama connection
-- [ ] Add connection status indicators to dashboard header:
-  - Gmail: Connected/Disconnected/Error
-  - Ollama: Connected/Disconnected/Error
-- [ ] Create settings page for managing connections:
-  - Gmail OAuth2 authentication flow
-  - Ollama server configuration
-  - Test connection buttons
-- [ ] Replace one mock agent card with real "Email Scanner" status
-- [ ] Add basic error handling and user feedback
-
-**Result**: Dashboard now shows real connection statuses and can authenticate with Gmail.
-
-**Files to Create**:
-- `core/gmail_service.py`
-- `core/llm_manager.py`
-- `ui/pages/settings.py`
-- `ui/components/connection_status.py`
-
----
-
-### Task 2.3: Simple Email Scanner Agent Implementation
-**Priority**: P0  
-**Component**: Agent Integration  
+**Component**: Framework + Native UI  
 **Estimated Time**: 6 hours
 
-**Description**: Create a basic working email scanner agent that can fetch and process emails.
+**Description**: Add Gmail authentication and Ollama connection functionality with native desktop status indicators and configuration.
 
 **Pre-requisites**:
-- Task 2.2 completed (Gmail and Ollama connections)
+- Task 2.1 completed (reimbursement agent native UI)
 
 **Acceptance Criteria**:
-- [ ] Create `agents/__init__.py` and `agents/base_agent.py`
-- [ ] Implement basic `agents/email_scanner/agent.py` with:
-  - Fetch recent emails from Gmail
-  - Simple text-based bill detection (keyword matching)
-  - Basic data extraction
-  - Save results to database
-- [ ] Create `agents/email_scanner/models.py` for data structures
-- [ ] Connect email scanner page to real agent:
-  - "Scan Emails" button triggers real scanning
-  - Display real results from Gmail
-  - Save and retrieve scan history
-- [ ] Add agent state management (running, idle, error)
-- [ ] Basic error handling and user feedback
+- [ ] Add Gmail API and Ollama dependencies to requirements (google-auth, google-api-python-client, ollama)
+- [ ] Create `core/gmail_service.py` with OAuth2 desktop flow setup
+- [ ] Create `core/llm_manager.py` with Ollama HTTP API connection using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`
+- [ ] Update dashboard header status indicators using Qt widgets:
+  - Gmail: QLabel with colored status dot (Connected/Disconnected/Error)
+  - Ollama: QLabel with colored status dot (Connected/Disconnected/Error)
+  - Real-time status updates using QTimer
+- [ ] Create native settings dialog `ui/dialogs/settings_dialog.py`:
+  - Gmail OAuth2 authentication with native browser flow
+  - Ollama server configuration using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`, `RSPA_OLLAMA_DEFAULT_MODEL`
+  - Security credential encryption using `RSPA_SECURITY_CREDENTIAL_ENCRYPTION`, `RSPA_SECURITY_CREDENTIAL_KEY_ROTATION_DAYS`
+  - QPushButton "Test Connection" buttons with feedback
+  - QProgressBar for connection testing
+- [ ] Update agent table model to show real "Reimbursement Agent" status from database
+- [ ] Add native error handling with QMessageBox for user feedback
+- [ ] Implement connection health checks with background QTimer
 
-**Result**: Working email scanner that can process real emails from Gmail and display results.
+**Result**: Native desktop application shows real service connection statuses with proper Qt-based configuration interface.
+
+**Files to Create**:
+- `core/gmail_service.py` (Gmail API service with desktop OAuth2)
+- `core/llm_manager.py` (Ollama HTTP client)
+- `ui/dialogs/settings_dialog.py` (Native settings QDialog)
+- `ui/widgets/connection_status_widget.py` (Custom status indicator)
+- Enhanced `ui/views/dashboard_view.py` with real status indicators
+
+---
+
+### Task 2.3: Simple Reimbursement Agent Implementation
+**Priority**: P0  
+**Component**: Agent Integration  
+**Estimated Time**: 7 hours
+
+**Description**: Create a basic working reimbursement agent that can fetch and process emails with real-time native UI feedback.
+
+**Pre-requisites**:
+- Task 2.2 completed (Gmail and Ollama connections with native UI)
+
+**Acceptance Criteria**:
+- [ ] Create `agents/__init__.py` and `agents/base_agent.py` abstract base class
+- [ ] Implement basic `agents/reimbursement/agent.py` with:
+  - Fetch recent emails from Gmail API
+  - Simple text-based reimbursable expense detection using keyword matching
+  - Basic data extraction (amount, vendor, date, expense category)
+  - Save results to database with proper SQLAlchemy models
+- [ ] Create `agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
+- [ ] Create `core/agent_manager.py` for agent lifecycle management
+- [ ] Connect reimbursement native UI to real agent:
+  - "Scan for Expenses" QPushButton triggers actual Gmail scanning
+  - QProgressBar shows real scanning progress with Qt signals
+  - QTableView displays real Gmail results via model updates
+  - Save and retrieve scan history from database
+- [ ] Add agent state management (running, idle, error) with Qt signals for UI updates
+- [ ] Implement native error handling with QMessageBox dialogs
+- [ ] Add agent status updates to dashboard table in real-time
+
+**Result**: Working reimbursement agent that processes real Gmail emails with native desktop UI feedback and database persistence.
 
 **Files to Create**:
 - `agents/__init__.py`
-- `agents/base_agent.py`
-- `agents/email_scanner/__init__.py`
-- `agents/email_scanner/agent.py`
-- `agents/email_scanner/models.py`
-- `core/agent_manager.py`
+- `agents/base_agent.py` (Abstract base with Qt signal support)
+- `agents/reimbursement/__init__.py`
+- `agents/reimbursement/agent.py` (Gmail processing agent)
+- `agents/reimbursement/models.py` (SQLAlchemy models for reimbursement data)
+- `core/agent_manager.py` (Agent lifecycle with Qt integration)
+- Enhanced database models in `models/` for reimbursement scan results
 
 ---
 
-## 🧠 Phase 3: LLM Integration & Advanced Features (P0)
+## 🧠 Phase 3: LLM Integration & Advanced Native Features (P0)
 
 ### Task 3.1: Advanced Email Scanner with LLM Bill Detection
 **Priority**: P0  
 **Component**: Agent Enhancement  
-**Estimated Time**: 6 hours
+**Estimated Time**: 7 hours
 
-**Description**: Replace keyword-based bill detection with AI-powered analysis using Ollama.
+**Description**: Replace keyword-based bill detection with AI-powered analysis using Ollama, with native desktop progress feedback.
 
 **Pre-requisites**:
-- Task 2.3 completed (basic email scanner)
+- Task 2.3 completed (basic email scanner with native UI)
 
 **Acceptance Criteria**:
-- [ ] Enhance `agents/email_scanner/agent.py` with LLM integration
+- [ ] Enhance `agents/email_scanner/agent.py` with Ollama LLM integration
 - [ ] Create `agents/email_scanner/prompts.py` with structured prompts for:
-  - Bill detection (yes/no classification)
-  - Information extraction (amount, vendor, date, category)
-- [ ] Add confidence scoring for AI decisions
-- [ ] Implement structured output parsing from LLM responses
-- [ ] Add prompt templates for different email types
-- [ ] Create fallback mechanisms for LLM failures
-- [ ] Add caching for LLM responses to avoid duplicate processing
-- [ ] Update UI to show confidence scores and AI reasoning
+  - Bill detection classification (yes/no with reasoning)
+  - Information extraction (amount, vendor, date, category, confidence)
+  - Prompt templates optimized for Llama 4 model using `RSPA_OLLAMA_DEFAULT_MODEL`
+- [ ] Configure LLM settings using `RSPA_OLLAMA_TEMPERATURE`, `RSPA_OLLAMA_TIMEOUT`, `RSPA_OLLAMA_MAX_RETRIES`
+- [ ] Add confidence scoring for AI decisions with visual indicators in Qt table
+- [ ] Implement structured JSON output parsing from LLM responses
+- [ ] Add email type detection and specialized prompt routing
+- [ ] Create fallback mechanisms for LLM failures (network, parsing errors)
+- [ ] Implement `core/llm_cache.py` for response caching using `RSPA_CACHE_ENABLE_LLM_CACHE`, `RSPA_CACHE_LLM_CACHE_TTL_HOURS`, `RSPA_CACHE_LLM_CACHE_MAX_SIZE_MB`
+- [ ] Update native UI to show:
+  - Confidence scores with color-coded QProgressBar widgets
+  - AI reasoning in email detail dialog
+  - LLM processing status in real-time via Qt signals
+- [ ] Add LLM performance metrics to dashboard status panel
 
-**Result**: Email scanner now uses AI for intelligent bill detection with much higher accuracy.
+**Result**: Email scanner uses local AI for intelligent bill detection with native desktop feedback and much higher accuracy.
 
 **Files to Create/Update**:
-- `agents/email_scanner/prompts.py` (new)
-- Enhanced `agents/email_scanner/agent.py`
-- `core/llm_cache.py` (new)
+- `agents/email_scanner/prompts.py` (Llama 4 optimized prompts)
+- Enhanced `agents/email_scanner/agent.py` (LLM integration)
+- `core/llm_cache.py` (Response caching system)
+- Enhanced `ui/models/email_results_model.py` (confidence display)
+- Enhanced `ui/dialogs/email_detail_dialog.py` (AI reasoning display)
 
 ---
 
-### Task 3.2: Enhanced Dashboard with Real-time Updates and Metrics
+### Task 3.2: Enhanced Native Dashboard with Real-time Updates and Metrics
 **Priority**: P0  
-**Component**: UI Enhancement  
-**Estimated Time**: 5 hours
+**Component**: Native UI Enhancement  
+**Estimated Time**: 6 hours
 
-**Description**: Add real-time monitoring, charts, and system metrics to the dashboard.
+**Description**: Add real-time monitoring, native charts, and system metrics to the desktop dashboard using Qt widgets.
 
 **Pre-requisites**:
-- Task 3.1 completed (LLM integration)
+- Task 3.1 completed (LLM integration with native feedback)
 
 **Acceptance Criteria**:
-- [ ] Add real-time agent status updates (auto-refresh every 5 seconds)
-- [ ] Create system metrics panel showing:
-  - CPU and memory usage
-  - Active agents count
-  - Recent task success/failure rates
-  - LLM response times
-- [ ] Add activity timeline showing recent agent actions
-- [ ] Create alert notifications for agent errors or failures
-- [ ] Add performance charts using Streamlit's built-in charting
-- [ ] Implement log viewer component for debugging
-- [ ] Add system health indicators (all green/yellow/red status)
+- [ ] Add real-time agent status updates using QTimer (auto-refresh every 5 seconds)
+- [ ] Create system metrics panel using native Qt widgets:
+  - CPU and memory usage with QProgressBar indicators
+  - Active agents count with QLCDNumber display
+  - Recent task success/failure rates with color-coded QLabel
+  - LLM response times with QLabel and trend indicators
+- [ ] Add activity timeline using QListWidget with timestamped entries
+- [ ] Create native alert notifications using QSystemTrayIcon for agent errors
+- [ ] Add performance charts using QCustomPlot or native Qt plotting:
+  - Agent execution times over time
+  - LLM response performance graphs
+  - Success/failure rate trends
+- [ ] Implement native log viewer using QTextBrowser with filtering
+- [ ] Add system health indicators with color-coded status dots (green/yellow/red)
+- [ ] Create dockable widgets for different monitoring panels
+- [ ] Add keyboard shortcuts for common monitoring actions
 
-**Result**: Professional-looking dashboard with live monitoring capabilities.
+**Result**: Professional native desktop dashboard with live monitoring capabilities and Qt-based visualizations.
 
 **Files to Create**:
-- `ui/components/metrics_panel.py`
-- `ui/components/activity_timeline.py`
-- `ui/components/log_viewer.py`
-- `core/performance_monitor.py`
+- `ui/widgets/metrics_panel_widget.py` (System metrics display)
+- `ui/widgets/activity_timeline_widget.py` (Recent actions timeline)
+- `ui/widgets/log_viewer_widget.py` (Native log browser)
+- `ui/widgets/performance_chart_widget.py` (Qt-based charts)
+- `core/performance_monitor.py` (System monitoring backend)
+- Enhanced `ui/views/dashboard_view.py` (integrated monitoring widgets)
 
 ---
 
-### Task 3.3: Advanced Email Scanner Features
+### Task 3.3: Advanced Email Scanner Features with Native UI
 **Priority**: P0  
 **Component**: Feature Enhancement  
-**Estimated Time**: 6 hours
+**Estimated Time**: 7 hours
 
-**Description**: Add advanced features like scheduling, batch processing, and reporting.
+**Description**: Add advanced features like scheduling, batch processing, and reporting with native desktop interfaces.
 
 **Pre-requisites**:
-- Task 3.2 completed (enhanced dashboard)
+- Task 3.2 completed (enhanced native dashboard with monitoring)
 
 **Acceptance Criteria**:
-- [ ] Add scheduled scanning functionality:
-  - Daily/weekly/monthly schedule options
-  - Background task execution
-  - Schedule management UI
-- [ ] Implement batch processing for large email volumes
-- [ ] Create comprehensive reporting features:
-  - Monthly/yearly expense summaries
-  - Category breakdowns
-  - Vendor analysis
-  - Export to multiple formats (CSV, PDF)
-- [ ] Add email scanning history and audit trail
-- [ ] Implement email filtering and search capabilities
-- [ ] Add Gmail label management (auto-labeling processed emails)
-- [ ] Create expense categorization and tagging
+- [ ] Add scheduled scanning functionality with native Qt scheduling UI:
+  - Daily/weekly/monthly schedule options using QDateTimeEdit
+  - Background task execution with QThread and worker objects
+  - Schedule management dialog with QTableView for schedule list
+  - System tray notifications for scheduled scans
+- [ ] Implement batch processing for large email volumes:
+  - Progress tracking with QProgressDialog
+  - Cancellable operations with proper thread management
+  - Batch size configuration with QSpinBox controls
+- [ ] Create comprehensive reporting features with native dialogs:
+  - Monthly/yearly expense summaries with Qt charts
+  - Category breakdowns using QTreeView widgets
+  - Vendor analysis with sortable QTableView
+  - Export to multiple formats using QFileDialog (CSV, PDF)
+- [ ] Add email scanning history with native search:
+  - QTableView with searchable/filterable history
+  - Date range filtering with QDateEdit widgets
+  - Full-text search using QLineEdit with live filtering
+- [ ] Implement Gmail label management:
+  - Auto-labeling configuration with QComboBox
+  - Label creation and management through Gmail API
+- [ ] Create expense categorization with native category management:
+  - Category editor dialog with QListWidget
+  - Drag-and-drop category assignment
+  - Rule-based auto-categorization setup
 
-**Result**: Production-ready email scanner with enterprise-level features.
+**Result**: Production-ready email scanner with enterprise-level features and professional native desktop interface.
 
 **Files to Create**:
-- `core/task_scheduler.py`
-- `agents/email_scanner/reports.py`
-- `ui/components/schedule_manager.py`
-- `ui/components/report_generator.py`
+- `core/task_scheduler.py` (Background scheduling with Qt integration)
+- `agents/email_scanner/reports.py` (Report generation backend)
+- `ui/dialogs/schedule_manager_dialog.py` (Native scheduling interface)
+- `ui/dialogs/report_generator_dialog.py` (Native reporting interface)
+- `ui/dialogs/category_manager_dialog.py` (Expense categorization)
+- `ui/widgets/batch_progress_widget.py` (Batch processing progress)
+- Enhanced email scanner view with advanced features tabs
 
 ---
 
-## 🎨 Phase 4: Polish & User Experience (P1)
+## 🎨 Phase 4: Native UI Polish & User Experience (P1)
 
-### Task 4.1: Advanced UI Styling and Themes  
+### Task 4.1: Advanced Native Styling and Themes  
 **Priority**: P1  
-**Component**: UI Enhancement  
-**Estimated Time**: 4 hours
-
-**Description**: Add professional styling, themes, and improved user experience.
-
-**Pre-requisites**:
-- Task 3.3 completed (advanced email scanner)
-
-**Acceptance Criteria**:
-- [ ] Create custom CSS styling with modern design
-- [ ] Add dark/light theme support with toggle
-- [ ] Implement responsive design for different screen sizes
-- [ ] Add loading animations and transitions
-- [ ] Create consistent color scheme and branding
-- [ ] Add keyboard shortcuts for common actions
-- [ ] Implement better error handling and user messages
-- [ ] Add tooltips and help text throughout the UI
-
-**Result**: Professional-looking application with polished user experience.
-
-**Files to Create**:
-- `ui/styles/main.css`
-- `ui/styles/themes.css`
-- `ui/components/theme_toggle.py`
-
----
-
-### Task 4.2: Configuration Management and Settings
-**Priority**: P1  
-**Component**: Framework Enhancement  
+**Component**: Native UI Enhancement  
 **Estimated Time**: 5 hours
 
-**Description**: Add comprehensive configuration management with environment variable support.
+**Description**: Add professional Qt styling, native themes, and improved desktop user experience.
 
 **Pre-requisites**:
-- Task 4.1 completed (UI polish)
+- Task 3.3 completed (advanced email scanner with native UI)
 
 **Acceptance Criteria**:
-- [ ] Create `core/settings.py` with hierarchical pydantic settings
-- [ ] Support environment variable configuration with `RSPA_*` prefix
-- [ ] Add settings validation and type checking
-- [ ] Create comprehensive `.env.example` file
-- [ ] Implement settings hot-reload for development
-- [ ] Add settings backup and restore functionality
-- [ ] Create settings migration system for updates
-- [ ] Add settings UI page with form validation
+- [ ] Create custom Qt stylesheets (QSS) with modern design:
+  - Professional color schemes and typography
+  - Custom button, table, and dialog styling
+  - Consistent spacing and margins throughout
+- [ ] Add dark/light theme support following OS preferences:
+  - Auto-detection of system theme with QApplication::setPalette
+  - Manual theme toggle with QAction in menu bar
+  - Theme persistence using QSettings and `RSPA_UI_THEME`
+- [ ] Configure UI settings using `RSPA_UI_WINDOW_WIDTH`, `RSPA_UI_WINDOW_HEIGHT`, `RSPA_UI_FONT_SIZE`, `RSPA_UI_MINIMIZE_TO_TRAY`
+- [ ] Implement responsive design for different screen sizes:
+  - Dynamic layout scaling with QSizePolicy
+  - Minimum and maximum window size constraints
+  - Proper widget sizing and font scaling
+- [ ] Add smooth transitions and animations:
+  - QPropertyAnimation for state changes
+  - Loading spinners and progress animations
+  - Fade effects for status changes
+- [ ] Create consistent branding and iconography:
+  - Custom application icon and window icons
+  - Consistent icon set throughout the interface
+  - Professional color palette and visual hierarchy
+- [ ] Add comprehensive keyboard shortcuts with QShortcut:
+  - Common actions (Ctrl+R for refresh, Ctrl+S for settings)
+  - Accessibility support with proper focus indicators
+- [ ] Implement enhanced error handling with native dialogs:
+  - QMessageBox for errors with proper icons and actions
+  - Status bar messages for non-critical feedback
+  - Tooltip help text throughout the interface
 
-**Result**: Robust configuration system supporting multiple deployment scenarios.
+**Result**: Professional-looking native desktop application with polished Qt-based user experience.
 
 **Files to Create**:
-- `core/settings.py`
-- `core/config_migration.py`
-- Enhanced `.env.example`
-- Updated `ui/pages/settings.py`
+- `ui/styles/main.qss` (Main Qt stylesheet)
+- `ui/styles/dark_theme.qss` (Dark theme stylesheet)
+- `ui/styles/light_theme.qss` (Light theme stylesheet)
+- `ui/widgets/theme_manager.py` (Theme management)
+- `ui/resources/` (Icons and branding assets)
+- Enhanced `ui/main_window.py` (keyboard shortcuts and theming)
 
 ---
 
-### Task 4.3: Testing Infrastructure and Quality Assurance
+### Task 4.2: Configuration Management with Native Settings UI
 **Priority**: P1  
-**Component**: Testing  
+**Component**: Framework Enhancement  
 **Estimated Time**: 6 hours
 
-**Description**: Add comprehensive testing suite and quality assurance tools.
+**Description**: Add comprehensive configuration management with native desktop settings interface and environment variable support.
 
 **Pre-requisites**:
-- Task 4.2 completed (configuration management)
+- Task 4.1 completed (native UI polish and theming)
 
 **Acceptance Criteria**:
-- [ ] Set up pytest testing framework with configuration
-- [ ] Create comprehensive test suite for all components:
-  - Unit tests for core modules
-  - Integration tests for agent workflows
-  - UI component tests with mocking
-- [ ] Add test fixtures and mock data factories
-- [ ] Implement code coverage reporting (>80% target)
-- [ ] Set up linting and formatting (Black, isort, mypy)
-- [ ] Create pre-commit hooks for code quality
-- [ ] Add performance benchmarking tests
-- [ ] Create continuous integration configuration
+- [ ] Create `core/settings.py` with hierarchical pydantic-settings configuration:
+  - Type-safe settings with validation
+  - Support for environment variables with `RSPA_*` prefix
+  - Nested settings groups (Database, Ollama, UI, Agents, etc.)
+  - Settings inheritance and override hierarchy
+- [ ] Implement native settings interface using Qt widgets:
+  - QTabWidget for organized settings categories
+  - Appropriate input widgets (QLineEdit, QSpinBox, QCheckBox, QComboBox)
+  - Real-time validation with visual feedback
+  - Settings preview and apply/cancel functionality
+- [ ] Add settings persistence using QSettings:
+  - Cross-platform settings storage
+  - Settings backup and restore functionality
+  - Import/export settings to/from files
+- [ ] Create settings migration system:
+  - Version-aware settings upgrades
+  - Safe fallbacks for invalid configurations
+  - Migration logging and rollback support
+- [ ] Implement settings hot-reload for development:
+  - File watcher for `.env` changes
+  - Live settings updates without restart
+  - Developer mode detection and warnings
+- [ ] Add comprehensive settings validation:
+  - Input validation with immediate feedback
+  - Connection testing for external services
+  - Settings dependencies and conflict detection
 
-**Result**: High-quality codebase with automated testing and code quality enforcement.
+**Result**: Robust configuration system with professional native settings interface supporting multiple deployment scenarios.
 
 **Files to Create**:
-- `tests/` directory structure
-- `tests/conftest.py`
-- `tests/test_*.py` files
-- `pytest.ini`
-- `.pre-commit-config.yaml`
-- `pyproject.toml` (tool configurations)
+- `core/settings.py` (Pydantic-settings configuration)
+- `core/config_migration.py` (Settings migration system)
+- `ui/dialogs/settings_dialog.py` (Native settings interface)
+- `ui/widgets/settings_widgets.py` (Custom settings input widgets)
+- Enhanced `.env.example` (comprehensive configuration template)
 
 ---
 
-## 🚢 Phase 5: Deployment & Distribution (P1)
-
-### Task 5.1: Basic Distribution Setup and Documentation
+### Task 4.3: Testing Infrastructure with Native UI Testing
 **Priority**: P1  
-**Component**: Distribution UI  
-**Estimated Time**: 4 hours
-
-**Description**: Create user-friendly distribution documentation and simple installation guide before building complex distribution systems.
-
-**Pre-requisites**:
-- Task 4.3 completed (testing infrastructure)
-
-**Acceptance Criteria**:
-- [ ] Create comprehensive installation guide in `INSTALL.md`
-- [ ] Document system requirements and dependencies
-- [ ] Add troubleshooting section for common installation issues
-- [ ] Create simple setup script (`setup.sh`/`setup.bat`) for environment setup
-- [ ] Add user guide with screenshots for first-time setup
-- [ ] Create basic health check command (`rspa --health`)
-- [ ] Test installation on clean systems (manual verification)
-- [ ] Document Ollama installation and model download process
-
-**Result**: Clear documentation and setup process that users can follow to install and run the system.
-
-**Files to Create**:
-- `INSTALL.md`
-- `setup.sh`
-- `setup.bat` 
-- `docs/user_guide.md`
-
----
-
-### Task 5.2: Cross-Platform Build System
-**Priority**: P1  
-**Component**: Distribution Framework  
+**Component**: Testing + Native UI Testing  
 **Estimated Time**: 8 hours
 
-**Description**: Implement PyInstaller-based build system that creates standalone executables for different platforms.
+**Description**: Add comprehensive testing suite including native Qt UI testing and quality assurance tools.
 
 **Pre-requisites**:
-- Task 5.1 completed (basic distribution setup)
+- Task 4.2 completed (native configuration management)
 
 **Acceptance Criteria**:
-- [ ] Create `scripts/build_standalone.py` with PyInstaller configuration
-- [ ] Implement separate build specs for Windows, macOS, and Linux
-- [ ] Set up automated dependency detection and bundling
-- [ ] Optimize bundle size by excluding unnecessary files
-- [ ] Include all required assets (config templates, docs)
-- [ ] Create platform-specific installer scripts
-- [ ] Add build verification that tests the executable
-- [ ] Configure CI/CD pipeline for automated builds
+- [ ] Set up pytest testing framework with Qt testing configuration:
+  - pytest-qt for native UI testing
+  - QTest integration for widget interaction testing
+  - Mock QApplication setup for headless testing
+- [ ] Create comprehensive test suite for all components:
+  - Unit tests for core modules (database, LLM, agents)
+  - Integration tests for agent workflows with real services
+  - Native UI component tests using pytest-qt:
+    - Widget interaction testing (clicks, keyboard input)
+    - Model-View architecture testing
+    - Dialog and window behavior testing
+    - Theme and styling verification
+- [ ] Add test fixtures and mock data factories:
+  - SQLAlchemy test database fixtures
+  - Mock Ollama responses and Gmail data
+  - Qt widget and application fixtures
+- [ ] Implement code coverage reporting with >80% target:
+  - Coverage for both backend and UI code
+  - Integration with pytest-cov
+  - HTML and console coverage reports
+- [ ] Set up code quality tools:
+  - Black for code formatting
+  - isort for import sorting
+  - mypy for type checking with Qt stubs
+  - ruff for fast linting
+- [ ] Create pre-commit hooks for automated quality checks
+- [ ] Add performance benchmarking tests for agents and UI
+- [ ] Create GitHub Actions CI configuration for automated testing
 
-**Result**: Automated build system that produces working standalone executables.
+**Result**: High-quality codebase with comprehensive automated testing including native Qt UI testing.
 
 **Files to Create**:
-- `scripts/build_standalone.py`
-- `build_configs/windows.spec`
-- `build_configs/macos.spec`
-- `build_configs/linux.spec`
-- `scripts/verify_build.py`
+- `tests/` directory structure with UI test organization
+- `tests/conftest.py` (Qt test fixtures and configuration)
+- `tests/test_core/` (Core module unit tests)
+- `tests/test_agents/` (Agent integration tests)
+- `tests/test_ui/` (Native UI component tests)
+- `tests/fixtures/` (Mock data and test utilities)
+- `pytest.ini` (Pytest configuration with qt plugin)
+- `.pre-commit-config.yaml` (Code quality hooks)
+- `.github/workflows/test.yml` (CI configuration)
+- Enhanced `pyproject.toml` (tool configurations)
 
 ---
 
-### Task 5.3: Container and Package Distribution
-**Priority**: P1  
-**Component**: Distribution Integration  
-**Estimated Time**: 6 hours
+## 🚀 Phase 5: Native Desktop Deployment & Distribution (P1)
 
-**Description**: Create Docker containers and Python package distribution for advanced deployment scenarios.
+### Task 5.1: Native Desktop Distribution Setup and Documentation
+**Priority**: P1  
+**Component**: Native Distribution Setup  
+**Estimated Time**: 5 hours
+
+**Description**: Create user-friendly native desktop distribution documentation and installation guide for cross-platform desktop deployment.
 
 **Pre-requisites**:
-- Task 5.2 completed (build system)
+- Task 4.3 completed (testing infrastructure with native UI testing)
 
 **Acceptance Criteria**:
-- [ ] Optimize existing `Dockerfile` for production deployment
-- [ ] Create `docker-compose.yml` for easy local development
-- [ ] Implement multi-stage Docker builds for smaller images
-- [ ] Add health checks and proper signal handling
-- [ ] Configure persistent volumes for data retention
-- [ ] Set up Python package configuration in `pyproject.toml`
-- [ ] Create PyPI upload and version management scripts
-- [ ] Test Docker deployment in various environments
-- [ ] Document deployment options (standalone, Docker, pip install)
+- [ ] Create comprehensive native desktop installation guide in `INSTALL.md`:
+  - Windows, macOS, and Linux installation instructions
+  - System requirements for PySide6 desktop application
+  - Ollama installation guide for each platform
+- [ ] Document native desktop dependencies and requirements:
+  - Qt6 runtime requirements
+  - System tray and desktop integration requirements
+  - Graphics drivers and display requirements
+- [ ] Add troubleshooting section for common desktop installation issues:
+  - Qt plugin loading issues
+  - System tray functionality problems
+  - Permission and security issues
+- [ ] Create platform-specific setup scripts:
+  - `setup.sh` for Linux/macOS with Qt dependencies
+  - `setup.bat` for Windows with proper environment setup
+  - Virtual environment creation and dependency installation
+- [ ] Add comprehensive user guide with native desktop screenshots:
+  - First-time setup and configuration
+  - Desktop-specific features (system tray, shortcuts)
+  - Native UI navigation and workflow
+- [ ] Create native desktop health check functionality:
+  - Command-line health check (`python -m rspa --health`)
+  - GUI-based system status check in main application
+  - Service connectivity verification
+- [ ] Test installation on clean systems across platforms
+- [ ] Document desktop-specific Ollama model management
 
-**Result**: Multiple deployment options available with clear documentation for each.
+**Result**: Clear documentation and setup process for native desktop application deployment across all major platforms.
 
 **Files to Create**:
-- Optimized `Dockerfile`
-- `docker-compose.yml`
-- `docker-compose.dev.yml`
-- `.dockerignore`
-- `scripts/build_package.py`
-- `scripts/upload_package.py`
+- `INSTALL.md` (Native desktop installation guide)
+- `setup.sh` (Linux/macOS setup script)
+- `setup.bat` (Windows setup script)
+- `docs/user_guide.md` (Desktop application user guide)
+- `docs/screenshots/` (Native UI screenshots for documentation)
+- Enhanced main application with health check functionality
+
+---
+
+### Task 5.2: Cross-Platform Native Desktop Build System
+**Priority**: P1  
+**Component**: Native Distribution Framework  
+**Estimated Time**: 10 hours
+
+**Description**: Implement PyInstaller and Nuitka-based build system that creates optimized standalone native desktop executables.
+
+**Pre-requisites**:
+- Task 5.1 completed (native desktop distribution setup)
+
+**Acceptance Criteria**:
+- [ ] Create `scripts/build_standalone.py` with dual build system support:
+  - PyInstaller 6.14.0 for fast development builds
+  - Nuitka 2.4.8 for optimized production builds
+  - Build target selection and configuration
+- [ ] Implement platform-specific build specifications:
+  - Windows: `.exe` with proper icon and metadata
+  - macOS: `.app` bundle with proper Info.plist and signing
+  - Linux: AppImage or standalone executable with desktop integration
+- [ ] Set up automated Qt dependency detection and bundling:
+  - PySide6 runtime library inclusion
+  - Qt plugins (platforms, imageformats, iconengines)
+  - System-specific Qt styling and theme support
+- [ ] Optimize bundle size for desktop distribution:
+  - Exclude development dependencies and test files
+  - Compress assets and resources
+  - Strip debug symbols for production builds
+- [ ] Include all required native desktop assets:
+  - Application icons in multiple resolutions
+  - Qt stylesheets and themes
+  - Configuration templates and documentation
+- [ ] Create platform-specific installer packages:
+  - Windows: NSIS installer with registry integration
+  - macOS: DMG package with drag-to-install
+  - Linux: DEB/RPM packages with desktop file integration
+- [ ] Add comprehensive build verification:
+  - Executable startup and basic functionality testing
+  - Qt widget rendering and interaction verification
+  - Service connectivity testing in built application
+- [ ] Configure GitHub Actions CI/CD for automated cross-platform builds
+
+**Result**: Professional automated build system producing optimized native desktop executables and installers for all platforms.
+
+**Files to Create**:
+- `scripts/build_standalone.py` (Dual build system)
+- `scripts/build_nuitka.py` (Nuitka-specific optimization)
+- `build_configs/windows.spec` (PyInstaller Windows config)
+- `build_configs/macos.spec` (PyInstaller macOS config)
+- `build_configs/linux.spec` (PyInstaller Linux config)
+- `installers/windows_installer.nsi` (NSIS installer script)
+- `installers/macos_package.py` (DMG creation script)
+- `installers/linux_package.py` (DEB/RPM creation script)
+- `scripts/verify_build.py` (Build verification testing)
+- `.github/workflows/build.yml` (CI/CD build pipeline)
+
+---
+
+### Task 5.3: Alternative Distribution Methods and Package Management
+**Priority**: P1  
+**Component**: Distribution Integration  
+**Estimated Time**: 7 hours
+
+**Description**: Create Docker containers for server deployment and Python package distribution while maintaining focus on native desktop as primary distribution method.
+
+**Pre-requisites**:
+- Task 5.2 completed (native desktop build system)
+
+**Acceptance Criteria**:
+- [ ] Create headless Docker container for server deployment scenarios:
+  - Optimized `Dockerfile` with X11 forwarding support for GUI access
+  - Minimal base image with only required Qt runtime components
+  - Support for running in display-less environments
+- [ ] Create `docker-compose.yml` for development and testing:
+  - Local development with hot-reload support
+  - Ollama service integration in containers
+  - Volume mounting for persistent data
+- [ ] Implement multi-stage Docker builds:
+  - Build stage with development dependencies
+  - Runtime stage with minimal footprint
+  - Proper layer caching for faster builds
+- [ ] Add container health checks and proper signal handling:
+  - Application health monitoring
+  - Graceful shutdown for Qt applications
+  - Process management and cleanup
+- [ ] Set up Python package distribution in `pyproject.toml`:
+  - Proper package metadata and dependencies
+  - Entry points for both GUI and CLI modes
+  - Development and production dependency separation
+- [ ] Create package build and upload automation:
+  - Wheel building with proper Qt bundling
+  - PyPI upload scripts with versioning
+  - Testing of installed packages
+- [ ] Document deployment options with emphasis on desktop:
+  - Primary: Native desktop executables (recommended)
+  - Secondary: Python package installation
+  - Advanced: Docker deployment for server scenarios
+- [ ] Test alternative deployment methods across platforms
+
+**Result**: Multiple professional deployment options with native desktop as the primary recommended method.
+
+**Files to Create**:
+- `Dockerfile` (Optimized for headless/server deployment)
+- `docker-compose.yml` (Development environment)
+- `docker-compose.prod.yml` (Production server deployment)
+- `.dockerignore` (Docker build optimization)
+- `scripts/build_package.py` (Python package building)
+- `scripts/upload_package.py` (PyPI upload automation)
+- Enhanced `pyproject.toml` (package distribution configuration)
+- `docs/deployment_guide.md` (Comprehensive deployment documentation)
 
 ---
 
@@ -601,19 +789,21 @@ This approach ensures:
 - [ ] **Social Media Monitor**: Track mentions and updates
 - [ ] **Task Manager**: Automated task creation and management
 
-### Task 7.2: Advanced UI Features (P2)
+### Task 7.2: Advanced Native Desktop UI Features (P2)
 **Priority**: P2  
-**Estimated Time**: 12 hours
+**Estimated Time**: 15 hours
 
-**Description**: Enhanced user interface features and customization.
+**Description**: Enhanced native desktop interface features and customization using advanced Qt capabilities.
 
 **Features**:
-- [ ] Dark/light theme switching
-- [ ] Customizable dashboard layouts
-- [ ] Advanced filtering and search
-- [ ] Data visualization charts
-- [ ] Mobile responsive design
-- [ ] Accessibility improvements
+- [ ] Advanced Qt theme switching with custom QSS styling
+- [ ] Customizable dashboard layouts with dockable QWidget panels
+- [ ] Advanced filtering and search with QCompleter and QSortFilterProxyModel
+- [ ] Data visualization charts using QCustomPlot or Qt Charts
+- [ ] Native desktop accessibility improvements (QAccessible support)
+- [ ] Multi-monitor support and window state management
+- [ ] Custom Qt animations and transitions
+- [ ] Native desktop keyboard navigation and shortcuts
 
 ### Task 7.3: API and Integration Layer (P3)
 **Priority**: P3  
@@ -634,20 +824,31 @@ This approach ensures:
 ## 📊 Task Summary
 
 ### By Priority:
-- **P0 Tasks**: 13 tasks, ~74 hours (Core system, Email Scanner, Basic UI)
-- **P1 Tasks**: 10 tasks, ~66 hours (Advanced features, Distribution, Testing)
-- **P2 Tasks**: 2 tasks, ~32 hours (Enhancement features)
-- **P3 Tasks**: 1 task, ~16 hours (Future expansion)
+- **P0 Tasks**: 9 tasks, ~77 hours (Core native desktop system, Email Scanner, Basic Qt UI)
+- **P1 Tasks**: 9 tasks, ~71 hours (Advanced native features, Distribution, Native UI Testing)
+- **P2 Tasks**: 2 tasks, ~35 hours (Advanced native desktop features)
+- **P3 Tasks**: 1 task, ~16 hours (Future API expansion)
 
 ### By Phase:
-1. **Phase 1 (Infrastructure)**: ~30 hours
-2. **Phase 2 (Email Scanner)**: ~22 hours
-3. **Phase 3 (User Interface)**: ~28 hours
-4. **Phase 4 (Advanced Features)**: ~24 hours
-5. **Phase 5 (Distribution)**: ~20 hours
-6. **Phase 6 (Testing/QA)**: ~24 hours
-7. **Phase 7 (Future)**: ~48 hours
+1. **Phase 1 (Native Desktop Infrastructure)**: ~32 hours
+2. **Phase 2 (Email Scanner with Native UI)**: ~24 hours
+3. **Phase 3 (LLM Integration & Advanced Native Features)**: ~30 hours
+4. **Phase 4 (Native UI Polish & User Experience)**: ~27 hours
+5. **Phase 5 (Native Desktop Distribution)**: ~22 hours
+6. **Phase 6 (Testing/QA with Native UI Testing)**: ~24 hours
+7. **Phase 7 (Future Native Desktop Enhancements)**: ~51 hours
 
-### Total Estimated Time: ~196 hours
+### Total Estimated Time: ~210 hours
 
-This comprehensive task breakdown provides a clear roadmap for implementing the RS Personal Assistant system, with each task having specific acceptance criteria and deliverables.
+This comprehensive task breakdown provides a clear roadmap for implementing the RS Personal Agent as a **professional native desktop application using PySide6**, with each task having specific acceptance criteria and deliverables focused on Qt-based desktop development.
+
+## 🖥️ Native Desktop Focus
+
+This task plan has been specifically designed for **native desktop application development** using:
+- **PySide6 6.9.1** for Qt6-based native UI
+- **MVC architecture** with Qt Model-View patterns
+- **Cross-platform desktop deployment** (Windows, macOS, Linux)
+- **Professional desktop UX** with system tray, native theming, and keyboard shortcuts
+- **PyInstaller + Nuitka** for optimized standalone executables
+
+The entire development strategy prioritizes native desktop user experience over web-based interfaces, ensuring the final application feels like a proper desktop application with full OS integration.

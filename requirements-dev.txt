@@ -13,6 +13,9 @@ freezegun>=1.2.0
 responses>=0.23.0
 testcontainers>=3.7.0
 
+# Qt/PySide6 Testing
+pytest-qt>=4.4.0
+
 # Development Tools
 black>=23.0.0
 isort>=5.12.0
@@ -20,12 +23,20 @@ flake8>=6.0.0
 mypy>=1.7.0
 pre-commit>=3.5.0
 
+# PySide6 Development Tools
+PySide6-stubs>=6.9.1
+qt6-tools>=6.7.0
+
 # Documentation
 mkdocs>=1.5.0
 mkdocs-material>=9.4.0
 mkdocstrings[python]>=0.24.0
 
-# Build Tools
-pyinstaller>=6.0.0
+# Build Tools - Desktop Application Packaging
+pyinstaller>=6.14.0
+nuitka>=2.4.8
 wheel>=0.42.0
 twine>=4.0.0
+
+# Desktop Application Development
+pillow>=10.0.0

@@ -1,6 +1,6 @@
 # Testing Standards and Guidelines
 
-This document defines the testing standards, patterns, and best practices for the RS Personal Assistant project. All test implementations must follow these guidelines to ensure consistency, maintainability, and comprehensive coverage.
+This document defines the testing standards, patterns, and best practices for the RS Personal Agent project. All test implementations must follow these guidelines to ensure consistency, maintainability, and comprehensive coverage.
 
 ## Testing Philosophy
 

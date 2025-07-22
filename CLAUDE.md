@@ -22,9 +22,9 @@ If you need to work with environment variables:
 
 ## Project Overview
 
-RS Personal Assistant (rs_pa) is a local AI-powered personal assistant platform built with Python. It uses a modular agent-based architecture with complete privacy - all AI processing happens locally using Ollama and Llama 4.
+RS Personal Agent (rs_pa) is a local AI-powered personal agent platform built with Python. It uses a modular agent-based architecture with complete privacy - all AI processing happens locally using Ollama and Meta's Llama 4 models.
 
-**Current Status**: The project is in the design/planning phase with comprehensive documentation but no implementation code yet. TASKS.md contains a detailed 196-hour implementation plan using an iterative UI-first development approach.
+**Current Status**: The project is in the design/planning phase with comprehensive documentation but no implementation code yet. TASKS.md contains a detailed implementation plan for native desktop development using an iterative UI-first approach.
 
 ## 🔄 Iterative Development Strategy
 
@@ -49,10 +49,10 @@ Each major feature follows this three-step pattern:
 2. **Add Framework Support**: Implement the underlying services, APIs, and data structures needed to support the UI
 3. **Integrate Real Functionality**: Connect the UI to real agents, databases, and external services
 
-### Example: Email Scanner Feature
-- **Step 1**: Create email scanner dashboard page showing mock scan results, buttons, and workflows
+### Example: Reimbursement Agent Feature
+- **Step 1**: Create reimbursement dashboard page showing mock scan results, buttons, and workflows
 - **Step 2**: Add Gmail API connection, database models, and basic data flow  
-- **Step 3**: Implement the actual AI-powered email scanning agent
+- **Step 3**: Implement the actual AI-powered reimbursement detection agent
 
 This ensures that at any point in development, there's a functional application that demonstrates the intended user experience.
 
@@ -68,11 +68,11 @@ This ensures that at any point in development, there's a functional application 
 ## Key Technologies
 
 - **Python 3.9+** - Primary language
-- **Streamlit** - Web UI framework
-- **SQLAlchemy + Alembic** - Database ORM and migrations
-- **Ollama** - Local LLM runtime (using Llama 4 Maverick model)
+- **PySide6** - Native desktop UI framework (Qt6 bindings)
+- **SQLAlchemy + Alembic** - Database ORM and migrations  
+- **Ollama** - Local LLM runtime (using Llama 4 models, default: `llama4:maverick`)
 - **LangChain** - LLM orchestration framework
-- **Gmail API** - For email scanner agent
+- **Gmail API** - For reimbursement agent
 
 ## Build and Development Commands
 
@@ -96,11 +96,11 @@ python -m alembic upgrade head              # Apply migrations
 alembic revision --autogenerate -m "desc"   # Create new migration
 alembic downgrade -1                        # Rollback migration
 
-# Run application
-streamlit run main.py
+# Run native desktop application
+python main.py
 
-# Build standalone executable
-uv pip install pyinstaller
+# Build standalone desktop executable
+uv pip install pyinstaller nuitka
 python scripts/build_standalone.py
 
 # Installing Ollama (required dependency)
@@ -111,8 +111,11 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Start Ollama service
 ollama serve
 
-# Download Llama 4 Maverick model
+# Download Llama 4 Maverick model (recommended for best performance)
 ollama pull llama4:maverick
+# Alternative Llama 4 models:
+# ollama pull llama4:scout    # 17B params, 16 experts, 10M context
+# ollama pull llama4:behemoth # 288B params (when available)
 ```
 
 ## Architecture Overview
@@ -130,12 +133,13 @@ The system follows a modular agent-based architecture:
    - Agents are self-contained and communicate through the database
 
 3. **Data Models** (`models/`)
-   - SQLAlchemy models for Agent, Task, User, EmailScanner entities
+   - SQLAlchemy models for Agent, Task, User, ReimbursementAgent entities
    - Alembic manages database migrations
 
 4. **UI Layer** (`ui/`)
-   - Streamlit-based dashboard
-   - Component-based architecture in `ui/components/`
+   - PySide6 native desktop interface with MVC architecture
+   - Model classes in `ui/models/`, View classes in `ui/views/`
+   - Controller classes in `ui/controllers/`, Custom widgets in `ui/widgets/`
 
 ## Development Guidelines
 
@@ -154,6 +158,7 @@ The system follows a modular agent-based architecture:
 3. **Testing**:
    - Test files should mirror source structure in `tests/`
    - Use pytest for testing framework
+   - Use pytest-qt for PySide6 UI testing
    - Mock Ollama responses in tests
 
 ## Important Design Documents
@@ -161,7 +166,7 @@ The system follows a modular agent-based architecture:
 - `DESIGN.md` - Complete system design overview
 - `docs/design/DESIGN_FRAMEWORK.md` - Framework architecture details
 - `docs/design/agents/DESIGN.md` - Agent development guide
-- `TASKS.md` - Detailed implementation task breakdown (196 hours across 7 phases)
+- `TASKS.md` - Detailed implementation task breakdown for native desktop development
 
 ## Claude Code Custom Slash Commands
 

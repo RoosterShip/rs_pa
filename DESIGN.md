@@ -1,22 +1,23 @@
-# RS Personal Assistant - System Design Index
+# RS Personal Agent - System Design Index
 
 ## 📋 Overview
 
-This document serves as the main index for the RS Personal Assistant (rs_pa) system design documentation. The system is designed as a modular AI-powered automation platform that manages multiple specialized AI agents for personal task automation.
+This document serves as the main index for the RS Personal Agent (rs_pa) system design documentation. The system is designed as a modular AI-powered automation platform that manages multiple specialized AI agents for personal task automation.
 
 ### Core Principles
 
 - **Privacy First**: All AI processing happens locally via Ollama
 - **Modular Design**: Extensible agent-based architecture
-- **Standalone Distribution**: Self-contained executable for easy sharing
+- **Native Desktop Application**: Self-contained executable with native OS integration
 - **Production Ready**: SQLAlchemy + Alembic for robust data management
-- **Modern UX**: Streamlit-based dashboard with contemporary design
+- **Professional UX**: PySide6-based native desktop interface with modern design
 
 ## 🏗️ High-Level System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Streamlit UI Layer                       │
+│             PySide6 Native Desktop UI Layer                 │
+│        (Qt Widgets, Models, Views, Controllers)             │
 ├─────────────────────────────────────────────────────────────┤
 │                  Agent Management Layer                     │
 ├─────────────────────────────────────────────────────────────┤
@@ -51,17 +52,18 @@ The complete system design is organized into three specialized documents:
 - Agent communication protocols
 - Testing strategies for agents
 - Performance optimization techniques
+- Reimbursement Agent implementation details
 
 ### [🎨 UI Design](docs/design/DESIGN_UI.md)
-**User interface architecture and design system**
+**Native desktop user interface architecture and design system**
 
-- Streamlit dashboard architecture
-- Modern component design system
-- Responsive layout patterns
-- Agent-specific interface components
-- State management strategies
-- Accessibility considerations
-- Custom styling and themes
+- PySide6 application architecture with MVC pattern
+- Qt Widget-based component system
+- Native desktop layout and window management
+- Agent-specific interface widgets
+- Qt Model-View state management
+- Desktop accessibility features
+- Native OS theming and styling
 
 ## 📂 Project Structure Overview
 
@@ -97,11 +99,12 @@ rs_pa/
 - Fault tolerance and recovery
 - Reusable patterns and components
 
-**Standalone Distribution**
-- PyInstaller for single executables
+**Native Desktop Distribution**
+- PyInstaller/Nuitka for native executables
+- PySide6 for professional desktop interface
 - Ollama for local LLM execution (see installation guide: https://www.ollama.com/download)
-- Multiple distribution channels
-- User-friendly installation
+- Cross-platform desktop support (Windows, macOS, Linux)
+- Single-file executable distribution
 
 ## 🔄 System Data Flow
 
@@ -147,6 +150,6 @@ Application ←→ SQLAlchemy Models ←→ Database Engine ←→ SQLite/Postgr
 
 ---
 
-For detailed implementation guidance, see the [complete task breakdown](TASKS.md) which provides 196+ hours of organized development work across 7 phases.
+For detailed implementation guidance, see the [complete task breakdown](TASKS.md) which provides 210+ hours of organized development work across 7 phases.
 
-This design supports building a robust, extensible personal assistant platform that maintains privacy while providing powerful automation capabilities through local AI processing.
+This design supports building a robust, extensible personal agent platform that maintains privacy while providing powerful automation capabilities through local AI processing.

@@ -1,6 +1,6 @@
 # Claude Code Custom Commands
 
-This document describes the custom slash commands available in Claude Code for the RS Personal Assistant project.
+This document describes the custom slash commands available in Claude Code for the RS Personal Agent project.
 
 ## Available Commands
 
@@ -142,7 +142,7 @@ To create your own custom Claude commands:
 
 Example custom command file (`.claude/commands/run-tests.md`):
 ```markdown
-Run the test suite for the RS Personal Assistant project.
+Run the test suite for the RS Personal Agent project.
 
 Execute the following command:
 \```bash
