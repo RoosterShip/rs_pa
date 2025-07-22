@@ -117,17 +117,17 @@ This approach ensures:
 - Task 1.2 completed (native dashboard UI with Qt table views)
 
 **Acceptance Criteria**:
-- [ ] Add SQLAlchemy dependencies to requirements (already in requirements.txt)
-- [ ] Create `src/models/base.py` with BaseModel class and SQLAlchemy setup
-- [ ] Create `src/models/agent.py` with Agent model (id, name, type, status, last_run, config)
-- [ ] Set up database manager in `src/core/database.py` with session management
-- [ ] Configure logging system using `RSPA_LOGGING_LEVEL`, `RSPA_LOGGING_LOG_TO_FILE`, `RSPA_LOGGING_LOG_TO_CONSOLE`, `RSPA_LOGGING_LOG_TO_DATABASE`
-- [ ] Create and run initial Alembic migration for Agent table
-- [ ] Populate database with mock agent data (4-5 sample agents)
-- [ ] Configure database settings using `RSPA_DATABASE_URL`, `RSPA_DATABASE_BACKUP_COUNT`, `RSPA_DATABASE_BACKUP_BEFORE_MIGRATION`
-- [ ] Update `src/ui/models/agent_table_model.py` to load real data from database
-- [ ] Connect Qt table view to database through the model
-- [ ] Verify table updates when database changes
+- [x] Add SQLAlchemy dependencies to requirements (already in requirements.txt)
+- [x] Create `src/models/base.py` with BaseModel class and SQLAlchemy setup
+- [x] Create `src/models/agent.py` with Agent model (id, name, type, status, last_run, config)
+- [x] Set up database manager in `src/core/database.py` with session management
+- [x] Configure logging system using `RSPA_LOGGING_LEVEL`, `RSPA_LOGGING_LOG_TO_FILE`, `RSPA_LOGGING_LOG_TO_CONSOLE`, `RSPA_LOGGING_LOG_TO_DATABASE`
+- [x] Create and run initial Alembic migration for Agent table
+- [x] Populate database with mock agent data (4-5 sample agents)
+- [x] Configure database settings using `RSPA_DATABASE_URL`, `RSPA_DATABASE_BACKUP_COUNT`, `RSPA_DATABASE_BACKUP_BEFORE_MIGRATION`
+- [x] Update `src/ui/models/agent_table_model.py` to load real data from database
+- [x] Connect Qt table view to database through the model
+- [x] Verify table updates when database changes
 
 **Result**: Native desktop dashboard table now displays real agent data from SQLAlchemy database.
 

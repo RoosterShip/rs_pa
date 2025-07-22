@@ -3,6 +3,7 @@ Agent table model for Qt Model-View architecture.
 
 This module provides a QAbstractTableModel for displaying agent data
 in a QTableView with proper sorting, filtering, and custom styling.
+Loads data from the SQLAlchemy database instead of using mock data.
 """
 
 from dataclasses import dataclass
@@ -20,20 +21,24 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import QWidget
 
+from ...core.database import get_db_session
+from ...models.agent import Agent, AgentStatus
 from ..widgets.status_indicator_widget import ServiceStatus
 
 
 @dataclass
 class AgentData:
-    """Data class representing an agent's information."""
+    """Data class representing an agent's information for the UI."""
 
     name: str
     agent_type: str
     status: ServiceStatus
-    last_run: datetime
+    last_run: Optional[datetime]
     description: str = ""
     tasks_completed: int = 0
     success_rate: float = 0.0
+    id: Optional[int] = None
+    enabled: bool = True
 
 
 class AgentTableModel(QAbstractTableModel):
@@ -76,60 +81,64 @@ class AgentTableModel(QAbstractTableModel):
         """
         super().__init__(parent)
         self._agents: List[AgentData] = []
-        self._setup_mock_data()
+        self._load_agents_from_database()
         self._setup_update_timer()
 
-    def _setup_mock_data(self) -> None:
-        """Set up mock agent data for demonstration."""
-        now = datetime.now()
+    def _load_agents_from_database(self) -> None:
+        """Load agent data from the database."""
+        try:
+            with get_db_session() as session:
+                db_agents = session.query(Agent).all()
 
-        self._agents = [
-            AgentData(
-                name="Email Scanner",
-                agent_type="Email Processing",
-                status=ServiceStatus.RUNNING,
-                last_run=now - timedelta(minutes=2),
-                description="Scans emails for reimbursable expenses",
-                tasks_completed=156,
-                success_rate=94.2,
-            ),
-            AgentData(
-                name="Task Manager",
-                agent_type="Productivity",
-                status=ServiceStatus.IDLE,
-                last_run=now - timedelta(hours=1, minutes=15),
-                description="Manages and organizes daily tasks",
-                tasks_completed=89,
-                success_rate=87.5,
-            ),
-            AgentData(
-                name="Calendar Agent",
-                agent_type="Scheduling",
-                status=ServiceStatus.ERROR,
-                last_run=now - timedelta(hours=3, minutes=45),
-                description="Handles calendar events and scheduling",
-                tasks_completed=234,
-                success_rate=76.8,
-            ),
-            AgentData(
-                name="Document Processor",
-                agent_type="Document Analysis",
-                status=ServiceStatus.DISABLED,
-                last_run=now - timedelta(days=2, hours=5),
-                description="Processes and analyzes documents",
-                tasks_completed=45,
-                success_rate=92.1,
-            ),
-            AgentData(
-                name="Financial Tracker",
-                agent_type="Finance",
-                status=ServiceStatus.RUNNING,
-                last_run=now - timedelta(minutes=8),
-                description="Tracks expenses and financial data",
-                tasks_completed=312,
-                success_rate=98.4,
-            ),
-        ]
+                self._agents = []
+                for db_agent in db_agents:
+                    # Convert database status to UI status
+                    ui_status = self._convert_db_status_to_ui_status(
+                        db_agent.status_enum
+                    )
+
+                    # Format agent type for display
+                    agent_type_display = db_agent.agent_type_enum.value.replace(
+                        "_", " "
+                    ).title()
+
+                    agent_data = AgentData(
+                        id=db_agent.id,
+                        name=db_agent.name,
+                        agent_type=agent_type_display,
+                        status=ui_status,
+                        last_run=db_agent.last_run,
+                        description=db_agent.description or "",
+                        tasks_completed=db_agent.run_count,
+                        success_rate=self._calculate_success_rate(db_agent),
+                        enabled=db_agent.enabled,
+                    )
+                    self._agents.append(agent_data)
+        except Exception as e:
+            print(f"Error loading agents from database: {e}")
+            # Fallback to empty list
+            self._agents = []
+
+    def _convert_db_status_to_ui_status(self, db_status: AgentStatus) -> ServiceStatus:
+        """Convert database agent status to UI service status."""
+        status_mapping = {
+            AgentStatus.RUNNING: ServiceStatus.RUNNING,
+            AgentStatus.IDLE: ServiceStatus.IDLE,
+            AgentStatus.ERROR: ServiceStatus.ERROR,
+            AgentStatus.DISABLED: ServiceStatus.DISABLED,
+        }
+        return status_mapping.get(db_status, ServiceStatus.UNKNOWN)
+
+    def _calculate_success_rate(self, db_agent: Agent) -> float:
+        """Calculate a mock success rate based on agent data."""
+        # This is a placeholder calculation - in a real system this would
+        # be calculated from actual task success/failure records
+        if db_agent.status_enum == AgentStatus.ERROR:
+            return 75.0 + (db_agent.id * 3) % 25  # 75-100% range
+        elif db_agent.status_enum == AgentStatus.DISABLED:
+            return 85.0 + (db_agent.id * 2) % 15  # 85-100% range
+        else:
+            return 90.0 + (db_agent.id * 1.5) % 10  # 90-100% range
 
     def _setup_update_timer(self) -> None:
         """Set up timer for periodic data updates."""
@@ -238,7 +247,7 @@ class AgentTableModel(QAbstractTableModel):
         elif column == self.COLUMN_STATUS:
             return self._format_status(agent.status)
         elif column == self.COLUMN_LAST_RUN:
-            return self._format_datetime(agent.last_run)
+            return self._format_datetime(agent.last_run) if agent.last_run else "Never"
         elif column == self.COLUMN_TASKS:
             return str(agent.tasks_completed)
         elif column == self.COLUMN_SUCCESS_RATE:
@@ -368,13 +377,17 @@ class AgentTableModel(QAbstractTableModel):
             .strip()
         )
 
+        last_run_str = (
+            agent.last_run.strftime("%Y-%m-%d %H:%M:%S") if agent.last_run else "Never"
+        )
+
         return f"""<b>{agent.name}</b><br/>
 Type: {agent.agent_type}<br/>
 Status: {status_text}<br/>
 Description: {agent.description}<br/>
 Tasks Completed: {agent.tasks_completed}<br/>
 Success Rate: {agent.success_rate:.1f}%<br/>
-Last Run: {agent.last_run.strftime('%Y-%m-%d %H:%M:%S')}"""
+Last Run: {last_run_str}"""
 
     def _get_alignment(self, column: int) -> int:
         """
@@ -471,10 +484,9 @@ Last Run: {agent.last_run.strftime('%Y-%m-%d %H:%M:%S')}"""
         return False
 
     def refresh_data(self) -> None:
-        """Refresh all data and emit signals."""
+        """Refresh all data from database and emit signals."""
         self.beginResetModel()
-        # In a real implementation, this would reload data from database
-        self._simulate_updates()
+        self._load_agents_from_database()
         self.endResetModel()
         self.refresh_requested.emit()
 
