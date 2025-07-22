@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
         self._create_status_bar()
         self._setup_shortcuts()
         self._setup_connections()
+        self._setup_system_tray()
 
     def _setup_window(self) -> None:
         """Set up basic window properties."""
@@ -246,6 +247,12 @@ class MainWindow(QMainWindow):
             "<p>Built with PySide6 and Qt6.</p>"
             "<p>© 2024 Roostership</p>",
         )
+
+    def _setup_system_tray(self) -> None:
+        """Setup system tray functionality."""
+        if hasattr(self, "_dashboard_view"):
+            # Initialize system tray via dashboard
+            self._dashboard_view.show_system_tray()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """

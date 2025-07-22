@@ -555,7 +555,10 @@ def get_llm_manager() -> Optional[OllamaManager]:
         # Load configuration from environment
         host = os.environ.get("RSPA_OLLAMA_HOST", "localhost")
         port = int(os.environ.get("RSPA_OLLAMA_PORT", "11434"))
-        default_model = os.environ.get("RSPA_OLLAMA_DEFAULT_MODEL", "hf.co/unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF:latest")
+        default_model = os.environ.get(
+            "RSPA_OLLAMA_DEFAULT_MODEL",
+            "hf.co/unsloth/Llama-4-Scout-17B-16E-Instruct-GGUF:latest",
+        )
 
         _llm_manager = OllamaManager(host=host, port=port, default_model=default_model)
 

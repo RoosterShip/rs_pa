@@ -5,7 +5,7 @@ This module provides the main dashboard interface with agent management,
 system status indicators, and professional Qt styling.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from PySide6.QtCore import QModelIndex, QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QAction
@@ -25,11 +25,16 @@ from PySide6.QtWidgets import (
 
 from ...core.gmail_service import GmailService
 from ...core.llm_manager import OllamaManager
+from ...core.performance_monitor import MetricReading, get_performance_monitor
 from ..models.agent_table_model import (
     AgentTableModel,
     ServiceStatus,
 )
+from ..widgets.activity_timeline_widget import ActivityTimelineWidget, ActivityType
 from ..widgets.connection_status_widget import ConnectionStatusWidget
+from ..widgets.log_viewer_widget import LogViewerWidget
+from ..widgets.metrics_panel_widget import MetricsPanelWidget
+from ..widgets.system_tray_widget import SystemTrayWidget
 
 
 class DashboardView(QWidget):
@@ -58,6 +63,9 @@ class DashboardView(QWidget):
         self._gmail_service = GmailService(self)
         self._ollama_manager = OllamaManager(parent=self)
 
+        # Initialize system tray
+        self._system_tray = SystemTrayWidget(self)
+
         self._setup_ui()
         self._setup_connections()
         self._setup_refresh_timer()
@@ -80,20 +88,99 @@ class DashboardView(QWidget):
         status_widget = self._create_status_section()
         main_layout.addWidget(status_widget)
 
-        # Main content splitter
-        splitter = QSplitter(Qt.Orientation.Vertical)
+        # Main content with enhanced monitoring
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Agent management section
-        agent_widget = self._create_agent_section()
-        splitter.addWidget(agent_widget)
+        # Left panel: Agent management and metrics
+        left_panel = self._create_left_panel()
+        main_splitter.addWidget(left_panel)
 
-        # Set splitter proportions
-        splitter.setStretchFactor(0, 1)
+        # Right panel: Activity timeline and logs
+        right_panel = self._create_right_panel()
+        main_splitter.addWidget(right_panel)
 
-        main_layout.addWidget(splitter)
+        # Set splitter proportions (60% left, 40% right)
+        main_splitter.setStretchFactor(0, 60)
+        main_splitter.setStretchFactor(1, 40)
+
+        main_layout.addWidget(main_splitter)
 
         # Apply styling
         self._apply_styling()
+
+        # Setup monitoring
+        self._setup_monitoring()
+
+    def _create_left_panel(self) -> QWidget:
+        """
+        Create the left panel with agent management and system metrics.
+
+        Returns:
+            Left panel widget
+        """
+        left_widget = QWidget()
+        layout = QVBoxLayout(left_widget)
+        layout.setSpacing(15)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Agent management section (top)
+        agent_widget = self._create_agent_section()
+        layout.addWidget(agent_widget, 2)  # Takes 2/3 of space
+
+        # System metrics panel (bottom)
+        self.metrics_panel = MetricsPanelWidget()
+        layout.addWidget(self.metrics_panel, 1)  # Takes 1/3 of space
+
+        return left_widget
+
+    def _create_right_panel(self) -> QWidget:
+        """
+        Create the right panel with activity timeline and logs.
+
+        Returns:
+            Right panel widget
+        """
+        right_widget = QWidget()
+        layout = QVBoxLayout(right_widget)
+        layout.setSpacing(15)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create vertical splitter for activity and logs
+        right_splitter = QSplitter(Qt.Orientation.Vertical)
+
+        # Activity timeline (top)
+        self.activity_timeline = ActivityTimelineWidget()
+        right_splitter.addWidget(self.activity_timeline)
+
+        # Log viewer (bottom)
+        self.log_viewer = LogViewerWidget()
+        right_splitter.addWidget(self.log_viewer)
+
+        # Set proportions (50/50)
+        right_splitter.setStretchFactor(0, 1)
+        right_splitter.setStretchFactor(1, 1)
+
+        layout.addWidget(right_splitter)
+
+        return right_widget
+
+    def _setup_monitoring(self) -> None:
+        """Setup monitoring connections and performance tracking."""
+        # Get performance monitor
+        self.performance_monitor = get_performance_monitor()
+
+        # Connect signals
+        self.performance_monitor.metric_updated.connect(self._on_metric_updated)
+        self.performance_monitor.alert_triggered.connect(self._on_alert_triggered)
+        self.activity_timeline.activity_selected.connect(self._on_activity_selected)
+
+        # Start monitoring
+        self.performance_monitor.start_monitoring()
+
+        # Add initial system startup activities
+        self.activity_timeline.add_activity(
+            ActivityType.SYSTEM_EVENT, "Enhanced monitoring dashboard loaded"
+        )
 
     def _create_header_section(self) -> QWidget:
         """
@@ -265,6 +352,11 @@ class DashboardView(QWidget):
         self._database_status.status_changed.connect(
             self._handle_connection_status_change
         )
+
+        # System tray connections
+        self._system_tray.show_dashboard_requested.connect(self._bring_to_front)
+        self._system_tray.settings_requested.connect(self._handle_settings)
+        self._system_tray.quit_requested.connect(self._handle_quit_request)
 
     def _setup_refresh_timer(self) -> None:
         """Set up automatic refresh timer."""
@@ -660,3 +752,92 @@ class DashboardView(QWidget):
     def get_ollama_manager(self) -> OllamaManager:
         """Get the Ollama manager instance."""
         return self._ollama_manager
+
+    def _on_metric_updated(self, reading: MetricReading) -> None:
+        """Handle metric update from performance monitor."""
+        # Update agent count display if this is an agent metric
+        if reading.name == "active_agents":
+            self.metrics_panel.update_agent_metrics(
+                int(reading.value),
+                self.metrics_panel.get_metrics_data()["success_rate"],
+            )
+
+        # Update performance metrics for LLM response times
+        if reading.name == "llm_response_time":
+            self.metrics_panel.update_performance_metrics(reading.value)
+
+            # Add activity for LLM requests
+            self.activity_timeline.add_activity(
+                ActivityType.LLM_REQUEST, f"LLM responded in {reading.value:.2f}s"
+            )
+
+    def _on_alert_triggered(
+        self, metric_name: str, alert_type: str, value: float
+    ) -> None:
+        """Handle performance alert."""
+        alert_message = f"{metric_name} {alert_type}: {value:.1f}"
+
+        # Add to activity timeline
+        if alert_type == "critical":
+            self.activity_timeline.add_activity(
+                ActivityType.ERROR, f"Critical alert: {alert_message}"
+            )
+        else:
+            self.activity_timeline.add_activity(
+                ActivityType.WARNING, f"Warning alert: {alert_message}"
+            )
+
+        # Add to logs
+        self.log_viewer.add_log_entry(
+            alert_type.upper(),
+            f"Performance alert triggered: {alert_message}",
+            "PerformanceMonitor",
+        )
+
+        # Show system tray notification
+        self._system_tray.show_alert_notification(alert_type, metric_name, value)
+
+    def _on_activity_selected(self, activity: Dict[str, Any]) -> None:
+        """Handle activity selection from timeline."""
+        # Show details in logs when activity is selected
+        details_text = f"Activity details: {activity.get('details', {})}"
+        self.log_viewer.add_log_entry(
+            "DEBUG",
+            f"Selected activity: {activity['message']} | {details_text}",
+            "ActivityTimeline",
+        )
+
+    def _bring_to_front(self) -> None:
+        """Bring the dashboard window to front."""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _handle_quit_request(self) -> None:
+        """Handle quit request from system tray."""
+        # This should be connected to the main application quit
+        from PySide6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app:
+            app.quit()
+
+    def show_system_tray(self) -> None:
+        """Show the system tray icon."""
+        if self._system_tray.is_available():
+            self._system_tray.show()
+
+            # Show initial notification
+            self._system_tray.show_success_notification(
+                "RS Personal Agent is running in the system tray"
+            )
+        else:
+            print("System tray not available on this system")
+
+    def hide_system_tray(self) -> None:
+        """Hide the system tray icon."""
+        self._system_tray.hide()
+
+    def get_system_tray(self) -> SystemTrayWidget:
+        """Get the system tray widget."""
+        return self._system_tray
