@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..models.reimbursement_results_model import ExpenseData
+from ..models.reimbursement_results_model import ExpenseResult
 
 
 class ExpenseDetailDialog(QDialog):
@@ -32,7 +32,7 @@ class ExpenseDetailDialog(QDialog):
     including all metadata, AI analysis, and description details.
     """
 
-    def __init__(self, expense: ExpenseData, parent: Optional[QWidget] = None):
+    def __init__(self, expense: ExpenseResult, parent: Optional[QWidget] = None):
         """
         Initialize the expense detail dialog.
 

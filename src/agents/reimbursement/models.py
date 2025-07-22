@@ -6,9 +6,18 @@ used by the reimbursement agent.
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import relationship
 
 from ...models.base import BaseModel
@@ -96,11 +105,26 @@ class ExpenseResult(BaseModel):
         String(100), nullable=True
     )  # e.g., "keyword_match", "llm_extraction"
 
+    # Reimbursement status
+    is_reimbursable = Column(Boolean, default=False, nullable=False)
+
     # Processing metadata
     processed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
     scan = relationship("ExpenseScan", back_populates="expense_results")
+
+    @property
+    def date(self) -> Optional[datetime]:
+        """Return the most relevant date (expense_date or email_date)."""
+        expense_date = getattr(self, "expense_date", None)
+        email_date = getattr(self, "email_date", None)
+        return expense_date or email_date
+
+    @property
+    def email_id(self) -> str:
+        """Alias for gmail_message_id for compatibility."""
+        return str(getattr(self, "gmail_message_id", ""))
 
     def __repr__(self) -> str:
         return (

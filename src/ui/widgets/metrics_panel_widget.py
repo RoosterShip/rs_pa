@@ -274,6 +274,16 @@ class MetricsPanelWidget(QWidget):
     def _update_metrics(self) -> None:
         """Update system metrics."""
         try:
+            # Ensure _metrics_data is initialized
+            if not hasattr(self, '_metrics_data') or self._metrics_data is None:
+                self._metrics_data = {
+                    "cpu_percent": 0.0,
+                    "memory_percent": 0.0,
+                    "active_agents": 0,
+                    "success_rate": 100.0,
+                    "avg_response_time": 0.0,
+                }
+
             # Get CPU usage
             cpu_percent = psutil.cpu_percent(interval=0.1)
 

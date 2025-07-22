@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ExpenseData:
+class ExpenseResult:
     """Data class representing an expense entry from email scan with LLM analysis."""
 
     date: datetime
@@ -90,7 +90,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
             parent: Parent object
         """
         super().__init__(parent)
-        self._expenses: List[ExpenseData] = []
+        self._expenses: List[ExpenseResult] = []
 
     def generate_mock_results(self) -> None:
         """Generate mock expense scan results for demonstration."""
@@ -98,7 +98,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
         # Mock data for demonstration
         mock_expenses = [
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=2),
                 subject="Receipt - Office Supplies Purchase",
                 sender="receipts@staples.com",
@@ -117,7 +117,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 validation_status="PASS",
                 quality_score=95.7,
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=5),
                 subject="Your Uber Receipt",
                 sender="noreply@uber.com",
@@ -136,7 +136,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 validation_status="PASS",
                 quality_score=92.8,
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=7),
                 subject="Hotel Confirmation - Downtown Convention Center",
                 sender="reservations@marriott.com",
@@ -148,7 +148,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=87.5,
                 email_id="msg003",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=10),
                 subject="Lunch Receipt - Client Meeting",
                 sender="receipts@thenicerestaurant.com",
@@ -160,7 +160,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=88.9,
                 email_id="msg004",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=12),
                 subject="Amazon Order Confirmation",
                 sender="auto-confirm@amazon.com",
@@ -172,7 +172,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=91.3,
                 email_id="msg005",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=15),
                 subject="Gas Station Receipt",
                 sender="receipts@shell.com",
@@ -184,7 +184,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=85.4,
                 email_id="msg006",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=18),
                 subject="Software Subscription Renewal",
                 sender="billing@adobe.com",
@@ -196,7 +196,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=94.7,
                 email_id="msg007",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=20),
                 subject="Coffee Shop Receipt",
                 sender="receipts@starbucks.com",
@@ -208,7 +208,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=76.2,
                 email_id="msg008",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=22),
                 subject="Conference Registration Confirmation",
                 sender="events@techconf2024.com",
@@ -220,7 +220,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 confidence=98.1,
                 email_id="msg009",
             ),
-            ExpenseData(
+            ExpenseResult(
                 date=datetime.now() - timedelta(days=25),
                 subject="Parking Receipt - Downtown",
                 sender="receipts@parkingco.com",
@@ -314,7 +314,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
         return None
 
-    def _get_display_data(self, expense: ExpenseData, column: int) -> str:
+    def _get_display_data(self, expense: ExpenseResult, column: int) -> str:
         """
         Get display data for a specific column.
 
@@ -427,7 +427,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
         return f"{icon} {score:.1f}%"
 
-    def _get_background_color(self, expense: ExpenseData) -> QBrush:
+    def _get_background_color(self, expense: ExpenseResult) -> QBrush:
         """
         Get background color based on expense status.
 
@@ -446,7 +446,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
         color = colors.get(expense.status, QColor(255, 255, 255))
         return QBrush(color)
 
-    def _get_text_color(self, expense: ExpenseData) -> QBrush:
+    def _get_text_color(self, expense: ExpenseResult) -> QBrush:
         """
         Get text color based on expense status.
 
@@ -465,7 +465,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
         color = colors.get(expense.status, QColor(17, 24, 39))  # Default dark
         return QBrush(color)
 
-    def _get_font(self, expense: ExpenseData, column: int) -> QFont:
+    def _get_font(self, expense: ExpenseResult, column: int) -> QFont:
         """
         Get font for a specific cell.
 
@@ -488,7 +488,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
         return font
 
-    def _get_tooltip(self, expense: ExpenseData) -> str:
+    def _get_tooltip(self, expense: ExpenseResult) -> str:
         """
         Get tooltip text for an expense with enhanced LLM analysis details.
 
@@ -578,7 +578,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
 
         return None
 
-    def get_expense_at_row(self, row: int) -> Optional[ExpenseData]:
+    def get_expense_at_row(self, row: int) -> Optional[ExpenseResult]:
         """
         Get expense data for a specific row.
 
@@ -598,7 +598,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
         self._expenses = []
         self.endResetModel()
 
-    def add_expense(self, expense: ExpenseData) -> None:
+    def add_expense(self, expense: ExpenseResult) -> None:
         """
         Add a new expense to the model.
 
@@ -704,7 +704,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                         status = "Reimbursable"
 
                 # Create expense data
-                expense = ExpenseData(
+                expense = ExpenseResult(
                     date=parsed_date,
                     subject=result.get("email_subject", ""),
                     sender=result.get("email_from", ""),
@@ -734,7 +734,7 @@ class ReimbursementResultsModel(QAbstractTableModel):
                 expenses.append(expense)
 
             except Exception as error:
-                logger.warning(f"Error converting LLM result to ExpenseData: {error}")
+                logger.warning(f"Error converting LLM result to ExpenseResult: {error}")
                 continue
 
         self._expenses = expenses

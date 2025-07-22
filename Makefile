@@ -153,7 +153,12 @@ type-check:
 	@echo "$(GREEN)✅ Type checking passed!$(RESET)"
 
 ## 🎯 Run all quality checks
-quality: format lint type-check test
+quality:
+	@echo "$(BOLD)$(BLUE)🎯 Running comprehensive quality checks...$(RESET)"
+	@$(MAKE) format
+	@$(MAKE) lint
+	@$(MAKE) type-check
+	@$(MAKE) test
 	@echo "$(BOLD)$(GREEN)🎯 All quality checks completed!$(RESET)"
 
 ## 📦 Build standalone executable
