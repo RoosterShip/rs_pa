@@ -12,14 +12,14 @@ The system uses SQLAlchemy as the ORM with Alembic for database migrations, prov
 
 #### Core Database Components
 
-**Database Session Management (`core/database.py`)**
+**Database Session Management (`src/core/database.py`)**
 ```python
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
 from pathlib import Path
-from core.settings import get_settings, DatabaseSettings
+from src.core.settings import get_settings, DatabaseSettings
 
 class DatabaseManager:
     def __init__(self, db_settings: DatabaseSettings = None):
@@ -38,7 +38,7 @@ class DatabaseManager:
         self.SessionLocal = scoped_session(sessionmaker(bind=self.engine))
         
         # Run migrations on initialization
-        from core.migration_manager import initialize_database
+        from src.core.migration_manager import initialize_database
         initialize_database(db_settings)
         
     @contextmanager
@@ -84,7 +84,7 @@ class DatabaseManager:
 
 #### Database Models Structure
 
-**Base Models (`models/base.py`)**
+**Base Models (`src/models/base.py`)**
 ```python
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
@@ -101,11 +101,11 @@ class BaseModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 ```
 
-**Agent Models (`models/agent.py`)**
+**Agent Models (`src/models/agent.py`)**
 ```python
 from sqlalchemy import Column, String, Text, Enum, ForeignKey
 from sqlalchemy.orm import relationship
-from models.base import BaseModel
+from src.models.base import BaseModel
 import enum
 
 class AgentStatus(enum.Enum):
@@ -129,11 +129,11 @@ class Agent(BaseModel):
     data_entries = relationship("AgentData", back_populates="agent")
 ```
 
-**Task Models (`models/task.py`)**
+**Task Models (`src/models/task.py`)**
 ```python
 from sqlalchemy import Column, String, Text, DateTime, Enum, ForeignKey
 from sqlalchemy.orm import relationship
-from models.base import BaseModel
+from src.models.base import BaseModel
 import enum
 
 class TaskStatus(enum.Enum):
@@ -166,9 +166,9 @@ class Task(BaseModel):
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from models.base import Base
-from models import agent, task  # Import all models
-from core.settings import get_settings
+from src.models.base import Base
+from src.models import agent, task  # Import all models
+from src.core.settings import get_settings
 
 # Alembic Config object
 config = context.config
@@ -206,7 +206,7 @@ def run_migrations_online():
             context.run_migrations()
 ```
 
-**Automatic Migration Runner (`core/migration_manager.py`)**
+**Automatic Migration Runner (`src/core/migration_manager.py`)**
 ```python
 import sys
 from pathlib import Path
@@ -215,7 +215,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import create_engine
 import logging
-from core.settings import get_settings, DatabaseSettings
+from src.core.settings import get_settings, DatabaseSettings
 
 class MigrationManager:
     """Handles automatic database migrations for standalone app"""
@@ -443,7 +443,7 @@ Using Qt standard paths:
 
 The LLM Manager provides centralized access to Ollama models with connection pooling, health monitoring, and fallback mechanisms.
 
-**LLM Manager (`core/llm_manager.py`)**
+**LLM Manager (`src/core/llm_manager.py`)**
 ```python
 from langchain_ollama import ChatOllama
 from typing import Dict, Optional, List
@@ -452,7 +452,7 @@ import logging
 import time
 import threading
 from dataclasses import dataclass
-from core.settings import get_settings, OllamaSettings
+from src.core.settings import get_settings, OllamaSettings
 
 @dataclass
 class ModelConfig:
@@ -606,7 +606,7 @@ class LLMManager:
 
 ### Response Caching System
 
-**LLM Response Cache (`core/llm_cache.py`)**
+**LLM Response Cache (`src/core/llm_cache.py`)**
 ```python
 import hashlib
 import json

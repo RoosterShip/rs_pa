@@ -40,18 +40,18 @@ This approach ensures:
 - Install Python 3.9+ and Git
 
 **Acceptance Criteria**:
-- [ ] Create basic directory structure with UI architecture 
-- [ ] Set up `pyproject.toml` with PySide6 6.9.1 dependencies
-- [ ] Configure `requirements.txt` and `requirements-dev.txt` for UV
-- [ ] Create `.gitignore` with Python and Qt exclusions
-- [ ] Create minimal `main.py` that launches a PySide6 QApplication
-- [ ] Create basic `ui/main_window.py` with QMainWindow
-- [ ] Window shows "RS Personal Agent" title and basic layout
-- [ ] Add menu bar with File/Exit functionality
-- [ ] Add status bar showing "Ready" message
-- [ ] Add comprehensive `.env.example` file for desktop settings with `RSPA_APP_NAME`, `RSPA_APP_VERSION`, `RSPA_DEBUG`, `RSPA_DATABASE_DEV_MODE` variables
-- [ ] Set up UV virtual environment
-- [ ] Successfully run `python main.py` and see native desktop window
+- [x] Create basic directory structure with UI architecture 
+- [x] Set up `pyproject.toml` with PySide6 6.9.1 dependencies
+- [x] Configure `requirements.txt` and `requirements-dev.txt` for UV
+- [x] Create `.gitignore` with Python and Qt exclusions
+- [x] Create minimal `main.py` that launches a PySide6 QApplication
+- [x] Create basic `src/ui/main_window.py` with QMainWindow
+- [x] Window shows "RS Personal Agent" title and basic layout
+- [x] Add menu bar with File/Exit functionality
+- [x] Add status bar showing "Ready" message
+- [x] Add comprehensive `.env.example` file for desktop settings with `RSPA_APP_NAME`, `RSPA_APP_VERSION`, `RSPA_DEBUG`, `RSPA_DATABASE_DEV_MODE` variables
+- [x] Set up UV virtual environment
+- [x] Successfully run `python main.py` and see native desktop window
 
 **Result**: A minimal but working native desktop application with proper window management.
 
@@ -62,8 +62,8 @@ This approach ensures:
 - `.gitignore`
 - `.env.example` (desktop-focused settings)
 - `main.py` (QApplication entry point)
-- `ui/__init__.py`
-- `ui/main_window.py` (Main QMainWindow class)
+- `src/ui/__init__.py`
+- `src/ui/main_window.py` (Main QMainWindow class)
 - Basic directory structure for MVC architecture
 
 ### Task 1.2: Native Dashboard with Mock Agent Table
@@ -77,12 +77,12 @@ This approach ensures:
 - Task 1.1 completed (basic PySide6 window setup)
 
 **Acceptance Criteria**:
-- [ ] Create `ui/views/dashboard_view.py` with proper QWidget layout
+- [ ] Create `src/ui/views/dashboard_view.py` with proper QWidget layout
 - [ ] Implement professional header section with title and refresh button
 - [ ] Add system status indicators for Ollama, Gmail, and Database with colored status dots
 - [ ] Create agent management section with QTableView
-- [ ] Implement `ui/models/agent_table_model.py` for Qt Model-View architecture
-- [ ] Create `ui/widgets/status_indicator_widget.py` for service status display
+- [ ] Implement `src/ui/models/agent_table_model.py` for Qt Model-View architecture
+- [ ] Create `src/ui/widgets/status_indicator_widget.py` for service status display
 - [ ] Mock agent data showing different states:
   - "Email Scanner" - Running state (green)
   - "Task Manager" - Idle state (yellow)
@@ -96,13 +96,13 @@ This approach ensures:
 **Result**: A visually complete native desktop dashboard with professional Qt styling.
 
 **Files to Create**:
-- `ui/views/__init__.py`
-- `ui/views/dashboard_view.py` (Main dashboard QWidget)
-- `ui/models/__init__.py`  
-- `ui/models/agent_table_model.py` (QAbstractTableModel for agents)
-- `ui/widgets/__init__.py`
-- `ui/widgets/status_indicator_widget.py` (Custom status display)
-- Enhanced `ui/main_window.py` to include dashboard view
+- `src/ui/views/__init__.py`
+- `src/ui/views/dashboard_view.py` (Main dashboard QWidget)
+- `src/ui/models/__init__.py`  
+- `src/ui/models/agent_table_model.py` (QAbstractTableModel for agents)
+- `src/ui/widgets/__init__.py`
+- `src/ui/widgets/status_indicator_widget.py` (Custom status display)
+- Enhanced `src/ui/main_window.py` to include dashboard view
 
 ---
 
@@ -118,25 +118,25 @@ This approach ensures:
 
 **Acceptance Criteria**:
 - [ ] Add SQLAlchemy dependencies to requirements (already in requirements.txt)
-- [ ] Create `models/base.py` with BaseModel class and SQLAlchemy setup
-- [ ] Create `models/agent.py` with Agent model (id, name, type, status, last_run, config)
-- [ ] Set up database manager in `core/database.py` with session management
+- [ ] Create `src/models/base.py` with BaseModel class and SQLAlchemy setup
+- [ ] Create `src/models/agent.py` with Agent model (id, name, type, status, last_run, config)
+- [ ] Set up database manager in `src/core/database.py` with session management
 - [ ] Configure logging system using `RSPA_LOGGING_LEVEL`, `RSPA_LOGGING_LOG_TO_FILE`, `RSPA_LOGGING_LOG_TO_CONSOLE`, `RSPA_LOGGING_LOG_TO_DATABASE`
 - [ ] Create and run initial Alembic migration for Agent table
 - [ ] Populate database with mock agent data (4-5 sample agents)
 - [ ] Configure database settings using `RSPA_DATABASE_URL`, `RSPA_DATABASE_BACKUP_COUNT`, `RSPA_DATABASE_BACKUP_BEFORE_MIGRATION`
-- [ ] Update `ui/models/agent_table_model.py` to load real data from database
+- [ ] Update `src/ui/models/agent_table_model.py` to load real data from database
 - [ ] Connect Qt table view to database through the model
 - [ ] Verify table updates when database changes
 
 **Result**: Native desktop dashboard table now displays real agent data from SQLAlchemy database.
 
 **Files to Create**:
-- `models/__init__.py`
-- `models/base.py` (SQLAlchemy declarative base)
-- `models/agent.py` (Agent model class)
-- `core/__init__.py`
-- `core/database.py` (Database session management)
+- `src/models/__init__.py`
+- `src/models/base.py` (SQLAlchemy declarative base)
+- `src/models/agent.py` (Agent model class)
+- `src/core/__init__.py`
+- `src/core/database.py` (Database session management)
 - `alembic.ini` (Alembic configuration)
 - `alembic/env.py` (Migration environment)
 - `alembic/versions/001_initial_agents.py` (Initial migration)
@@ -157,12 +157,12 @@ This approach ensures:
 
 **Acceptance Criteria**:
 - [ ] Add "Reimbursement Agent" tab to main window's QTabWidget navigation
-- [ ] Create `ui/views/reimbursement_view.py` with QWidget-based interface:
+- [ ] Create `src/ui/views/reimbursement_view.py` with QWidget-based interface:
   - QDateEdit widgets for date range selection
   - QPushButton "Scan for Expenses" with proper styling
   - QProgressBar and QLabel for progress indication
   - QTableView for results display with custom model
-- [ ] Create `ui/models/reimbursement_results_model.py` for Qt Model-View architecture
+- [ ] Create `src/ui/models/reimbursement_results_model.py` for Qt Model-View architecture
 - [ ] Mock scanning results showing in table:
   - Processed email subjects, senders, dates
   - Detected expense amounts and vendor names
@@ -176,11 +176,11 @@ This approach ensures:
 **Result**: Professional native desktop reimbursement interface with Qt widgets and proper desktop UX.
 
 **Files to Create**:
-- `ui/views/reimbursement_view.py` (Main reimbursement agent QWidget)
-- `ui/models/reimbursement_results_model.py` (QAbstractTableModel for results)
-- `ui/widgets/progress_widget.py` (Custom progress indicator)
-- `ui/dialogs/expense_detail_dialog.py` (QDialog for expense details)
-- Enhanced `ui/main_window.py` to include reimbursement agent tab
+- `src/ui/views/reimbursement_view.py` (Main reimbursement agent QWidget)
+- `src/ui/models/reimbursement_results_model.py` (QAbstractTableModel for results)
+- `src/ui/widgets/progress_widget.py` (Custom progress indicator)
+- `src/ui/dialogs/expense_detail_dialog.py` (QDialog for expense details)
+- Enhanced `src/ui/main_window.py` to include reimbursement agent tab
 
 ---
 
@@ -196,13 +196,13 @@ This approach ensures:
 
 **Acceptance Criteria**:
 - [ ] Add Gmail API and Ollama dependencies to requirements (google-auth, google-api-python-client, ollama)
-- [ ] Create `core/gmail_service.py` with OAuth2 desktop flow setup
-- [ ] Create `core/llm_manager.py` with Ollama HTTP API connection using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`
+- [ ] Create `src/core/gmail_service.py` with OAuth2 desktop flow setup
+- [ ] Create `src/core/llm_manager.py` with Ollama HTTP API connection using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`
 - [ ] Update dashboard header status indicators using Qt widgets:
   - Gmail: QLabel with colored status dot (Connected/Disconnected/Error)
   - Ollama: QLabel with colored status dot (Connected/Disconnected/Error)
   - Real-time status updates using QTimer
-- [ ] Create native settings dialog `ui/dialogs/settings_dialog.py`:
+- [ ] Create native settings dialog `src/ui/dialogs/settings_dialog.py`:
   - Gmail OAuth2 authentication with native browser flow
   - Ollama server configuration using `RSPA_OLLAMA_HOST`, `RSPA_OLLAMA_PORT`, `RSPA_OLLAMA_DEFAULT_MODEL`
   - Security credential encryption using `RSPA_SECURITY_CREDENTIAL_ENCRYPTION`, `RSPA_SECURITY_CREDENTIAL_KEY_ROTATION_DAYS`
@@ -215,11 +215,11 @@ This approach ensures:
 **Result**: Native desktop application shows real service connection statuses with proper Qt-based configuration interface.
 
 **Files to Create**:
-- `core/gmail_service.py` (Gmail API service with desktop OAuth2)
-- `core/llm_manager.py` (Ollama HTTP client)
-- `ui/dialogs/settings_dialog.py` (Native settings QDialog)
-- `ui/widgets/connection_status_widget.py` (Custom status indicator)
-- Enhanced `ui/views/dashboard_view.py` with real status indicators
+- `src/core/gmail_service.py` (Gmail API service with desktop OAuth2)
+- `src/core/llm_manager.py` (Ollama HTTP client)
+- `src/ui/dialogs/settings_dialog.py` (Native settings QDialog)
+- `src/ui/widgets/connection_status_widget.py` (Custom status indicator)
+- Enhanced `src/ui/views/dashboard_view.py` with real status indicators
 
 ---
 
@@ -234,14 +234,14 @@ This approach ensures:
 - Task 2.2 completed (Gmail and Ollama connections with native UI)
 
 **Acceptance Criteria**:
-- [ ] Create `agents/__init__.py` and `agents/base_agent.py` abstract base class
-- [ ] Implement basic `agents/reimbursement/agent.py` with:
+- [ ] Create `src/agents/__init__.py` and `src/agents/base_agent.py` abstract base class
+- [ ] Implement basic `src/agents/reimbursement/agent.py` with:
   - Fetch recent emails from Gmail API
   - Simple text-based reimbursable expense detection using keyword matching
   - Basic data extraction (amount, vendor, date, expense category)
   - Save results to database with proper SQLAlchemy models
-- [ ] Create `agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
-- [ ] Create `core/agent_manager.py` for agent lifecycle management
+- [ ] Create `src/agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
+- [ ] Create `src/core/agent_manager.py` for agent lifecycle management
 - [ ] Connect reimbursement native UI to real agent:
   - "Scan for Expenses" QPushButton triggers actual Gmail scanning
   - QProgressBar shows real scanning progress with Qt signals
@@ -254,13 +254,13 @@ This approach ensures:
 **Result**: Working reimbursement agent that processes real Gmail emails with native desktop UI feedback and database persistence.
 
 **Files to Create**:
-- `agents/__init__.py`
-- `agents/base_agent.py` (Abstract base with Qt signal support)
-- `agents/reimbursement/__init__.py`
-- `agents/reimbursement/agent.py` (Gmail processing agent)
-- `agents/reimbursement/models.py` (SQLAlchemy models for reimbursement data)
-- `core/agent_manager.py` (Agent lifecycle with Qt integration)
-- Enhanced database models in `models/` for reimbursement scan results
+- `src/agents/__init__.py`
+- `src/agents/base_agent.py` (Abstract base with Qt signal support)
+- `src/agents/reimbursement/__init__.py`
+- `src/agents/reimbursement/agent.py` (Gmail processing agent)
+- `src/agents/reimbursement/models.py` (SQLAlchemy models for reimbursement data)
+- `src/core/agent_manager.py` (Agent lifecycle with Qt integration)
+- Enhanced database models in `src/models/` for reimbursement scan results
 
 ---
 
@@ -277,8 +277,8 @@ This approach ensures:
 - Task 2.3 completed (basic email scanner with native UI)
 
 **Acceptance Criteria**:
-- [ ] Enhance `agents/email_scanner/agent.py` with Ollama LLM integration
-- [ ] Create `agents/email_scanner/prompts.py` with structured prompts for:
+- [ ] Enhance `src/agents/email_scanner/agent.py` with Ollama LLM integration
+- [ ] Create `src/agents/email_scanner/prompts.py` with structured prompts for:
   - Bill detection classification (yes/no with reasoning)
   - Information extraction (amount, vendor, date, category, confidence)
   - Prompt templates optimized for Llama 4 model using `RSPA_OLLAMA_DEFAULT_MODEL`
@@ -287,7 +287,7 @@ This approach ensures:
 - [ ] Implement structured JSON output parsing from LLM responses
 - [ ] Add email type detection and specialized prompt routing
 - [ ] Create fallback mechanisms for LLM failures (network, parsing errors)
-- [ ] Implement `core/llm_cache.py` for response caching using `RSPA_CACHE_ENABLE_LLM_CACHE`, `RSPA_CACHE_LLM_CACHE_TTL_HOURS`, `RSPA_CACHE_LLM_CACHE_MAX_SIZE_MB`
+- [ ] Implement `src/core/llm_cache.py` for response caching using `RSPA_CACHE_ENABLE_LLM_CACHE`, `RSPA_CACHE_LLM_CACHE_TTL_HOURS`, `RSPA_CACHE_LLM_CACHE_MAX_SIZE_MB`
 - [ ] Update native UI to show:
   - Confidence scores with color-coded QProgressBar widgets
   - AI reasoning in email detail dialog
@@ -297,11 +297,11 @@ This approach ensures:
 **Result**: Email scanner uses local AI for intelligent bill detection with native desktop feedback and much higher accuracy.
 
 **Files to Create/Update**:
-- `agents/email_scanner/prompts.py` (Llama 4 optimized prompts)
-- Enhanced `agents/email_scanner/agent.py` (LLM integration)
-- `core/llm_cache.py` (Response caching system)
-- Enhanced `ui/models/email_results_model.py` (confidence display)
-- Enhanced `ui/dialogs/email_detail_dialog.py` (AI reasoning display)
+- `src/agents/email_scanner/prompts.py` (Llama 4 optimized prompts)
+- Enhanced `src/agents/email_scanner/agent.py` (LLM integration)
+- `src/core/llm_cache.py` (Response caching system)
+- Enhanced `src/ui/models/email_results_model.py` (confidence display)
+- Enhanced `src/ui/dialogs/email_detail_dialog.py` (AI reasoning display)
 
 ---
 
@@ -336,12 +336,12 @@ This approach ensures:
 **Result**: Professional native desktop dashboard with live monitoring capabilities and Qt-based visualizations.
 
 **Files to Create**:
-- `ui/widgets/metrics_panel_widget.py` (System metrics display)
-- `ui/widgets/activity_timeline_widget.py` (Recent actions timeline)
-- `ui/widgets/log_viewer_widget.py` (Native log browser)
-- `ui/widgets/performance_chart_widget.py` (Qt-based charts)
-- `core/performance_monitor.py` (System monitoring backend)
-- Enhanced `ui/views/dashboard_view.py` (integrated monitoring widgets)
+- `src/ui/widgets/metrics_panel_widget.py` (System metrics display)
+- `src/ui/widgets/activity_timeline_widget.py` (Recent actions timeline)
+- `src/ui/widgets/log_viewer_widget.py` (Native log browser)
+- `src/ui/widgets/performance_chart_widget.py` (Qt-based charts)
+- `src/core/performance_monitor.py` (System monitoring backend)
+- Enhanced `src/ui/views/dashboard_view.py` (integrated monitoring widgets)
 
 ---
 
@@ -385,12 +385,12 @@ This approach ensures:
 **Result**: Production-ready email scanner with enterprise-level features and professional native desktop interface.
 
 **Files to Create**:
-- `core/task_scheduler.py` (Background scheduling with Qt integration)
-- `agents/email_scanner/reports.py` (Report generation backend)
-- `ui/dialogs/schedule_manager_dialog.py` (Native scheduling interface)
-- `ui/dialogs/report_generator_dialog.py` (Native reporting interface)
-- `ui/dialogs/category_manager_dialog.py` (Expense categorization)
-- `ui/widgets/batch_progress_widget.py` (Batch processing progress)
+- `src/core/task_scheduler.py` (Background scheduling with Qt integration)
+- `src/agents/email_scanner/reports.py` (Report generation backend)
+- `src/ui/dialogs/schedule_manager_dialog.py` (Native scheduling interface)
+- `src/ui/dialogs/report_generator_dialog.py` (Native reporting interface)
+- `src/ui/dialogs/category_manager_dialog.py` (Expense categorization)
+- `src/ui/widgets/batch_progress_widget.py` (Batch processing progress)
 - Enhanced email scanner view with advanced features tabs
 
 ---
@@ -440,12 +440,12 @@ This approach ensures:
 **Result**: Professional-looking native desktop application with polished Qt-based user experience.
 
 **Files to Create**:
-- `ui/styles/main.qss` (Main Qt stylesheet)
-- `ui/styles/dark_theme.qss` (Dark theme stylesheet)
-- `ui/styles/light_theme.qss` (Light theme stylesheet)
-- `ui/widgets/theme_manager.py` (Theme management)
-- `ui/resources/` (Icons and branding assets)
-- Enhanced `ui/main_window.py` (keyboard shortcuts and theming)
+- `src/ui/styles/main.qss` (Main Qt stylesheet)
+- `src/ui/styles/dark_theme.qss` (Dark theme stylesheet)
+- `src/ui/styles/light_theme.qss` (Light theme stylesheet)
+- `src/ui/widgets/theme_manager.py` (Theme management)
+- `src/ui/resources/` (Icons and branding assets)
+- Enhanced `src/ui/main_window.py` (keyboard shortcuts and theming)
 
 ---
 
@@ -460,7 +460,7 @@ This approach ensures:
 - Task 4.1 completed (native UI polish and theming)
 
 **Acceptance Criteria**:
-- [ ] Create `core/settings.py` with hierarchical pydantic-settings configuration:
+- [ ] Create `src/core/settings.py` with hierarchical pydantic-settings configuration:
   - Type-safe settings with validation
   - Support for environment variables with `RSPA_*` prefix
   - Nested settings groups (Database, Ollama, UI, Agents, etc.)
@@ -490,10 +490,10 @@ This approach ensures:
 **Result**: Robust configuration system with professional native settings interface supporting multiple deployment scenarios.
 
 **Files to Create**:
-- `core/settings.py` (Pydantic-settings configuration)
-- `core/config_migration.py` (Settings migration system)
-- `ui/dialogs/settings_dialog.py` (Native settings interface)
-- `ui/widgets/settings_widgets.py` (Custom settings input widgets)
+- `src/core/settings.py` (Pydantic-settings configuration)
+- `src/core/config_migration.py` (Settings migration system)
+- `src/ui/dialogs/settings_dialog.py` (Native settings interface)
+- `src/ui/widgets/settings_widgets.py` (Custom settings input widgets)
 - Enhanced `.env.example` (comprehensive configuration template)
 
 ---

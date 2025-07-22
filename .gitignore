@@ -1,2 +1,156 @@
+# Environment files
 .env
+.env.local
+.env.production
+
+# Project specific
 prompt.md
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Qt-specific files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+*.moc.cpp
+ui_*.h
+qrc_*.cpp
+qrc_*.py
+*.qm
+*.prl
+
+# Qt Creator
+CMakeLists.txt.user*
+
+# QtCreator Qml
+*.qmlproject.user
+*.qmlproject.user.*
+
+# QML Cache
+*.qmlc
+*.jsc
+
+# Qt for Python files
+*.ui
+
+# PySide6/Qt compiled resource files
+*_rc.py
+
+# OSX
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+
+# IDE files
+.vscode/
+.idea/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+logs/
+*.log
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# PyInstaller build files
+*.onefile-build/
+
+# Nuitka build files
+*.build/
+*.dist/
+
+# Executable files
+*.exe
+*.app
+*.dmg
+*.deb
+*.rpm
+*.appimage
+
+# Security files (NEVER commit)
+*.pem
+*.key
+*.cert
+*.crt
+token.json
+credentials.json
+client_secret*.json
+.google_credentials/
+.oauth_cache/
+
+# Application data
+.rspa/
+rspa_data/
+data/
+
+# Test outputs
+test-reports/
+test-results/

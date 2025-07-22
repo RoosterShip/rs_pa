@@ -185,25 +185,124 @@ The application will:
 5. Download `credentials.json` to `config/credentials/`
 6. First run will prompt for Gmail authorization
 
+## 🛠️ Development with Makefile
+
+We provide a comprehensive Makefile that uses UV for fast, efficient development workflows. The Makefile includes professional styling with emojis and colors for a great developer experience.
+
+### Quick Setup
+
+```bash
+# Complete setup (create environment + install dev dependencies)
+make setup
+
+# Run the application
+make run
+```
+
+### Available Commands
+
+#### 📦 Environment Management
+```bash
+make env           # 🏗️  Create UV virtual environment
+make install       # 📥  Install production dependencies
+make dev-install   # 🛠️  Install development dependencies
+make setup         # ⚡  Complete setup (env + dev-install)
+```
+
+#### 🏃 Development Commands
+```bash
+make run           # 🖥️  Run the desktop application
+make test          # 🧪  Run all tests with coverage
+make test-fast     # ⚡  Run tests without coverage
+make test-watch    # 👀  Run tests in watch mode
+```
+
+#### 🔍 Code Quality
+```bash
+make lint          # 🔍  Run linting checks (flake8, ruff)
+make format        # ✨  Format code (black, isort)
+make type-check    # 🔒  Run type checking (mypy)
+make quality       # 🎯  Run all quality checks
+```
+
+#### 🏗️ Build & Package
+```bash
+make build         # 📦  Build standalone executable
+make package       # 📦  Create distribution packages
+make docs          # 📖  Generate documentation
+```
+
+#### 🧹 Maintenance
+```bash
+make clean         # 🧹  Clean build artifacts
+make clean-cache   # 💾  Clean Python cache files
+make clean-env     # 🗑️   Remove virtual environment
+make reset         # 🔄  Complete reset (clean + setup)
+```
+
+#### 🔧 Advanced Commands
+```bash
+make status        # 📊  Show project status
+make hooks         # 🔧  Install pre-commit hooks
+make dev           # 🚀  Quick development workflow
+make ci            # 🤖  Run CI pipeline (quality + tests)
+```
+
+### Development Workflow Examples
+
+```bash
+# Start fresh development
+make reset
+
+# Quick development iteration
+make dev          # Runs: format → lint → type-check → test-fast
+
+# Prepare for commit
+make quality && make test
+
+# Continuous testing during development
+make test-watch
+
+# Check project health
+make status
+```
+
+### UV Integration Benefits
+
+The Makefile leverages UV's speed advantages:
+- **10-100x faster** package installation
+- **Automatic environment management** 
+- **Cross-platform compatibility**
+- **Modern dependency resolution**
+
+All commands are optimized for UV's performance characteristics while maintaining compatibility with standard Python tooling.
+
 ## 📁 Project Structure
 
 ```
 rs_pa/
 ├── main.py                     # Application entry point
-├── agents/                     # Agent implementations
-│   ├── base_agent.py          # Abstract base agent
-│   └── reimbursement/         # Reimbursement agent
-├── core/                      # Core infrastructure
-│   ├── database.py            # SQLAlchemy models & session
-│   ├── llm_manager.py         # Ollama integration
-│   └── agent_manager.py       # Agent lifecycle management
-├── ui/                        # PySide6 native desktop UI
-│   ├── main_window.py         # Main desktop window
-│   ├── views/                 # UI view components
-│   ├── models/                # Qt data models
-│   └── widgets/               # Custom Qt widgets
-├── models/                    # SQLAlchemy database models
+├── src/                        # Source code directory
+│   ├── agents/                 # Agent implementations
+│   │   ├── base_agent.py      # Abstract base agent
+│   │   └── reimbursement/     # Reimbursement agent
+│   ├── core/                  # Core infrastructure
+│   │   ├── database.py        # SQLAlchemy models & session
+│   │   ├── llm_manager.py     # Ollama integration
+│   │   └── agent_manager.py   # Agent lifecycle management
+│   ├── ui/                    # PySide6 native desktop UI
+│   │   ├── main_window.py     # Main desktop window
+│   │   ├── views/             # UI view components
+│   │   ├── models/            # Qt data models
+│   │   └── widgets/           # Custom Qt widgets
+│   └── models/                # SQLAlchemy database models
+├── tests/                     # Test suite
 ├── alembic/                   # Database migrations
+├── docs/                      # Documentation
+├── build_configs/             # Build configurations
+├── installers/               # Package installers
+├── scripts/                   # Build and utility scripts
+├── Makefile                   # Development workflow automation
 └── config/                    # Configuration files
 ```
 

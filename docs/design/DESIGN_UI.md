@@ -52,15 +52,15 @@ This document details the user interface design and implementation guidelines fo
 
 ### Base Application Architecture
 
-#### 1. Main Application Window (`ui/main_window.py`)
+#### 1. Main Application Window (`src/ui/main_window.py`)
 ```python
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QStackedWidget, QMenuBar, 
                              QStatusBar, QToolBar)
 from PySide6.QtCore import QTimer, QThread, Signal, QSettings
 from PySide6.QtGui import QAction, QIcon, QKeySequence
-from ui.widgets.theme_manager import ThemeManager
-from ui.views.dashboard_view import DashboardView
+from src.ui.widgets.theme_manager import ThemeManager
+from src.ui.views.dashboard_view import DashboardView
 
 class MainWindow(QMainWindow):
     """Main application window with native Qt interface"""
@@ -156,7 +156,7 @@ class MainWindow(QMainWindow):
         view_menu.addAction(refresh_action)
 ```
 
-#### 2. Theme Manager (`ui/widgets/theme_manager.py`)
+#### 2. Theme Manager (`src/ui/widgets/theme_manager.py`)
 ```python
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject, Signal, QSettings
@@ -383,7 +383,7 @@ class ThemeManager(QObject):
         return self.THEMES.get(actual_theme, self.THEMES["dark"]).get(color_name, "#000000")
 ```
 
-#### 3. Side Navigation Panel (`ui/widgets/side_panel.py`)
+#### 3. Side Navigation Panel (`src/ui/widgets/side_panel.py`)
 ```python
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QButtonGroup, QSpacerItem, QSizePolicy)
@@ -489,14 +489,14 @@ class SidePanel(QFrame):
 
 ### Model-View Components
 
-#### 4. Agent Table Model (`ui/models/agent_table_model.py`)
+#### 4. Agent Table Model (`src/ui/models/agent_table_model.py`)
 ```python
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFont
 from typing import List, Any, Optional
 from datetime import datetime
-from models.agent import Agent, AgentStatus
-from core.database import DatabaseManager
+from src.models.agent import Agent, AgentStatus
+from src.core.database import DatabaseManager
 
 class AgentTableModel(QAbstractTableModel):
     """Qt model for displaying agent data in table views"""
@@ -598,14 +598,14 @@ class AgentTableModel(QAbstractTableModel):
         return None
 ```
 
-#### 5. Agent Card Widget (`ui/widgets/agent_card_widget.py`)
+#### 5. Agent Card Widget (`src/ui/widgets/agent_card_widget.py`)
 ```python
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QProgressBar, QGridLayout)
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QFont, QPalette
 from typing import Dict, Any
-from models.agent import Agent, AgentStatus
+from src.models.agent import Agent, AgentStatus
 from datetime import datetime
 
 class AgentCardWidget(QFrame):
@@ -759,17 +759,17 @@ class AgentCardWidget(QFrame):
 
 ### View Components
 
-#### 6. Dashboard View (`ui/views/dashboard_view.py`)
+#### 6. Dashboard View (`src/ui/views/dashboard_view.py`)
 ```python
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QFrame, QScrollArea, QGridLayout, QPushButton,
                              QTableView, QSplitter, QTabWidget)
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QFont
-from ui.models.agent_table_model import AgentTableModel
-from ui.widgets.agent_card_widget import AgentCardWidget
-from ui.widgets.status_indicator_widget import StatusIndicatorWidget
-from ui.widgets.performance_chart_widget import PerformanceChartWidget
+from src.ui.models.agent_table_model import AgentTableModel
+from src.ui.widgets.agent_card_widget import AgentCardWidget
+from src.ui.widgets.status_indicator_widget import StatusIndicatorWidget
+from src.ui.widgets.performance_chart_widget import PerformanceChartWidget
 from typing import List, Dict
 
 class DashboardView(QWidget):
@@ -1010,7 +1010,7 @@ class DashboardView(QWidget):
 
 ### Advanced UI Components
 
-#### 7. Performance Chart Widget (`ui/widgets/performance_chart_widget.py`)
+#### 7. Performance Chart Widget (`src/ui/widgets/performance_chart_widget.py`)
 ```python
 import sys
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
@@ -1173,7 +1173,7 @@ class PerformanceChartWidget(QWidget):
             painter.drawText(width - 150, height - 10, value_text)
 ```
 
-#### 8. Log Viewer Component (`ui/widgets/log_viewer_widget.py`)
+#### 8. Log Viewer Component (`src/ui/widgets/log_viewer_widget.py`)
 ```python
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QTextBrowser, QLineEdit, QComboBox, 
@@ -1181,7 +1181,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import QTimer, Signal, QThread
 from PySide6.QtGui import QTextCharFormat, QColor, QFont
 from typing import List, Dict
-from core.logging_manager import LoggingManager, LogEntry, LogLevel
+from src.core.logging_manager import LoggingManager, LogEntry, LogLevel
 
 class LogViewerWidget(QWidget):
     """Real-time log viewer with filtering and search"""
@@ -1361,7 +1361,7 @@ class LogViewerWidget(QWidget):
 
 ## 🔧 Configuration for PySide6
 
-### Theme Configuration (`ui/styles/themes.yaml`)
+### Theme Configuration (`src/ui/styles/themes.yaml`)
 ```yaml
 themes:
   dark:

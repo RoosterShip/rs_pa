@@ -10,7 +10,7 @@ This document details the agent architecture and development guidelines for the 
 
 All agents inherit from a common base class that provides standardized interfaces, lifecycle management, and integration with the core system.
 
-**Base Agent Class (`agents/base_agent.py`)**
+**Base Agent Class (`src/agents/base_agent.py`)**
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
@@ -20,11 +20,11 @@ import logging
 import json
 import uuid
 
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
-from models.task import Task, TaskStatus
-from models.agent import Agent, AgentStatus
+from src.core.database import DatabaseManager
+from src.core.llm_manager import LLMManager
+from src.core.config_manager import ConfigManager
+from src.models.task import Task, TaskStatus
+from src.models.agent import Agent, AgentStatus
 
 @dataclass
 class AgentResult:
@@ -206,9 +206,9 @@ class BaseAgent(ABC):
 
 This section provides a generic template for implementing new agents in the system. For specific agent implementations, see the individual agent design documents in the `docs/design/agents/` directory.
 
-**Example Agent Template (`agents/example_agent/agent.py`)**
+**Example Agent Template (`src/agents/example_agent/agent.py`)**
 ```python
-from agents.base_agent import BaseAgent, AgentResult
+from src.agents.base_agent import BaseAgent, AgentResult
 from typing import Dict, Any, List
 import json
 from datetime import datetime
@@ -362,7 +362,7 @@ class ExampleAgent(BaseAgent):
 
 ### Generic Agent Components
 
-**Prompt Templates (`agents/example_agent/prompts.py`)**
+**Prompt Templates (`src/agents/example_agent/prompts.py`)**
 ```python
 # Define your agent-specific prompts
 ANALYSIS_PROMPT = """
@@ -390,7 +390,7 @@ Respond with:
 """
 ```
 
-**Data Models (`agents/example_agent/models.py`)**
+**Data Models (`src/agents/example_agent/models.py`)**
 ```python
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -459,11 +459,11 @@ custom_setting_2: 42
 
 For complex agents that require multi-step processing, LangGraph provides structured workflow management.
 
-**LangGraph Workflow Example (`agents/email_scanner/workflow.py`)**
+**LangGraph Workflow Example (`src/agents/email_scanner/workflow.py`)**
 ```python
 from langgraph import StateGraph, END
 from typing import Dict, Any, List
-from agents.email_scanner.models import EmailData, ScanResult
+from src.agents.email_scanner.models import EmailData, ScanResult
 
 class EmailScannerState:
     """State management for email scanning workflow"""
@@ -568,10 +568,10 @@ from typing import Dict, Any
 import json
 from datetime import datetime
 
-from agents.base_agent import BaseAgent, AgentResult
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
+from src.agents.base_agent import BaseAgent, AgentResult
+from src.core.database import DatabaseManager
+from src.core.llm_manager import LLMManager
+from src.core.config_manager import ConfigManager
 
 class BaseAgentTest(unittest.TestCase):
     """Base test class for all agent tests"""
@@ -641,8 +641,8 @@ import json
 from datetime import datetime
 
 from tests.test_agents.base_agent_test import BaseAgentTest
-from agents.email_scanner.agent import EmailScannerAgent
-from agents.email_scanner.models import EmailData, BillData, ScanResult
+from src.agents.email_scanner.agent import EmailScannerAgent
+from src.agents.email_scanner.models import EmailData, BillData, ScanResult
 
 class TestEmailScannerAgent(BaseAgentTest):
     """Test cases for Email Scanner Agent"""
@@ -836,10 +836,10 @@ import os
 from pathlib import Path
 import sqlite3
 
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
-from agents.email_scanner.agent import EmailScannerAgent
+from src.core.database import DatabaseManager
+from src.core.llm_manager import LLMManager
+from src.core.config_manager import ConfigManager
+from src.agents.email_scanner.agent import EmailScannerAgent
 
 class AgentIntegrationTest(unittest.TestCase):
     """Integration tests for agents with real dependencies"""
@@ -856,7 +856,7 @@ class AgentIntegrationTest(unittest.TestCase):
         self.config_manager = ConfigManager()
         
         # Create database tables
-        from models.base import Base
+        from src.models.base import Base
         Base.metadata.create_all(self.db_manager.engine)
     
     def tearDown(self):
@@ -1029,7 +1029,7 @@ class BatchProcessingMixin:
 
 4. **Create Data Models**
    ```python
-   # agents/my_new_agent/models.py
+   # src/agents/my_new_agent/models.py
    from pydantic import BaseModel
    
    class MyAgentInput(BaseModel):
@@ -1043,7 +1043,7 @@ class BatchProcessingMixin:
 
 5. **Design Prompts**
    ```python
-   # agents/my_new_agent/prompts.py
+   # src/agents/my_new_agent/prompts.py
    MAIN_PROMPT = """
    You are an AI assistant specialized in [specific task].
    
@@ -1111,14 +1111,14 @@ class BatchProcessingMixin:
 
 ### Agent Registry System
 
-**Dynamic Agent Registration (`agents/registry.py`)**
+**Dynamic Agent Registration (`src/agents/registry.py`)**
 ```python
 from typing import Dict, Type, List
 import importlib
 import inspect
 from pathlib import Path
 
-from agents.base_agent import BaseAgent
+from src.agents.base_agent import BaseAgent
 
 class AgentRegistry:
     """Central registry for all available agents"""
@@ -1140,7 +1140,7 @@ class AgentRegistry:
         """Register agent from directory"""
         try:
             # Import agent module
-            module_name = f"agents.{agent_dir.name}.agent"
+            module_name = f"src.agents.{agent_dir.name}.agent"
             module = importlib.import_module(module_name)
             
             # Find agent class
@@ -1213,10 +1213,10 @@ This agent design provides a comprehensive framework for building, testing, and 
 ```python
 import unittest
 from unittest.mock import Mock, patch
-from agents.base_agent import BaseAgent, AgentResult
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
+from src.agents.base_agent import BaseAgent, AgentResult
+from src.core.database import DatabaseManager
+from src.core.llm_manager import LLMManager
+from src.core.config_manager import ConfigManager
 
 class BaseAgentTest(unittest.TestCase):
     """Base test class for agent testing"""
@@ -1260,8 +1260,8 @@ class BaseAgentTest(unittest.TestCase):
 ```python
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from agents.email_scanner.agent import EmailScannerAgent
-from agents.email_scanner.models import EmailData, BillData, ScanResult
+from src.agents.email_scanner.agent import EmailScannerAgent
+from src.agents.email_scanner.models import EmailData, BillData, ScanResult
 from tests.test_agents.base_agent_test import BaseAgentTest
 
 class TestEmailScannerAgent(BaseAgentTest):
@@ -1463,7 +1463,7 @@ if __name__ == '__main__':
 
 ### Agent Performance Monitoring
 
-**Performance Tracking (`agents/base_agent.py` extension)**
+**Performance Tracking (`src/agents/base_agent.py` extension)**
 ```python
 import time
 from typing import Dict, Any
@@ -1539,12 +1539,12 @@ class PerformanceTracker:
 
 ### LLM Response Caching
 
-**Agent-Level Caching (`agents/mixins/caching_mixin.py`)**
+**Agent-Level Caching (`src/agents/mixins/caching_mixin.py`)**
 ```python
 import hashlib
 import json
 from typing import Optional, Any
-from core.llm_cache import LLMCache
+from src.core.llm_cache import LLMCache
 
 class CachingMixin:
     """Mixin to add caching capabilities to agents"""

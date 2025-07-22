@@ -25,12 +25,12 @@ The Reimbursement Agent is an AI-powered component that automatically scans Gmai
 
 ### Agent Structure
 
-**Reimbursement Agent (`agents/reimbursement/agent.py`)**
+**Reimbursement Agent (`src/agents/reimbursement/agent.py`)**
 ```python
-from agents.base_agent import BaseAgent, AgentResult
-from agents.reimbursement.prompts import BILL_DETECTION_PROMPT, EXTRACT_BILL_INFO_PROMPT
-from agents.reimbursement.models import EmailData, BillData, ScanResult
-from core.gmail_service import GmailService
+from src.agents.base_agent import BaseAgent, AgentResult
+from src.agents.reimbursement.prompts import BILL_DETECTION_PROMPT, EXTRACT_BILL_INFO_PROMPT
+from src.agents.reimbursement.models import EmailData, BillData, ScanResult
+from src.core.gmail_service import GmailService
 from typing import Dict, Any, List
 import json
 from datetime import datetime
@@ -377,7 +377,7 @@ class ReimbursementAgent(BaseAgent):
 
 ### Agent Prompts
 
-**Prompt Templates (`agents/reimbursement/prompts.py`)**
+**Prompt Templates (`src/agents/reimbursement/prompts.py`)**
 ```python
 BILL_DETECTION_PROMPT = """
 Analyze the following email to determine if it contains a reimbursable expense (bill, invoice, or receipt).
@@ -466,7 +466,7 @@ Report:
 
 ### Data Models
 
-**Pydantic Models (`agents/reimbursement/models.py`)**
+**Pydantic Models (`src/agents/reimbursement/models.py`)**
 ```python
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
@@ -590,8 +590,8 @@ timeout_seconds: 30
 import unittest
 from unittest.mock import Mock, patch
 from datetime import datetime
-from agents.reimbursement.agent import ReimbursementAgent
-from agents.reimbursement.models import EmailData, BillData, ScanResult
+from src.agents.reimbursement.agent import ReimbursementAgent
+from src.agents.reimbursement.models import EmailData, BillData, ScanResult
 
 class TestReimbursementAgent(unittest.TestCase):
     """Test cases for Reimbursement Agent"""

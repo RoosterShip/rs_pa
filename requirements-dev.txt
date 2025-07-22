@@ -24,8 +24,8 @@ mypy>=1.7.0
 pre-commit>=3.5.0
 
 # PySide6 Development Tools
-PySide6-stubs>=6.9.1
-qt6-tools>=6.7.0
+PySide6-stubs>=6.7.3
+qt6-tools>=6.5.0
 
 # Documentation
 mkdocs>=1.5.0

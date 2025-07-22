@@ -80,10 +80,10 @@ import pytest
 from unittest.mock import Mock, MagicMock
 from typing import Dict, Any, Optional
 
-from agents.base_agent import BaseAgent, AgentResult
-from core.database import DatabaseManager
-from core.llm_manager import LLMManager
-from core.config_manager import ConfigManager
+from src.agents.base_agent import BaseAgent, AgentResult
+from src.core.database import DatabaseManager
+from src.core.llm_manager import LLMManager
+from src.core.config_manager import ConfigManager
 
 class BaseAgentTest:
     """Base test class for all agent tests."""
@@ -395,7 +395,7 @@ def mock_ollama_response():
 def reset_singletons():
     """Reset singleton instances between tests."""
     # Reset any singleton instances that might carry state
-    from core.llm_manager import LLMManager
+    from src.core.llm_manager import LLMManager
     LLMManager._instance = None
     yield
     LLMManager._instance = None
@@ -408,8 +408,8 @@ def reset_singletons():
 import factory
 from factory import fuzzy
 from datetime import datetime, timedelta
-from models.agent import Agent, AgentStatus
-from models.task import Task, TaskStatus
+from src.models.agent import Agent, AgentStatus
+from src.models.task import Task, TaskStatus
 
 class AgentFactory(factory.Factory):
     """Factory for creating test Agent instances."""

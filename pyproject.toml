@@ -12,6 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "RS Personal Agent Team"},
 ]
+
 keywords = [
     "ai", "assistant", "personal", "privacy", "local", "llm", "ollama", "agent"
 ]
@@ -70,8 +71,8 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.7.0",
     "pre-commit>=3.5.0",
-    "PySide6-stubs>=6.9.1",
-    "qt6-tools>=6.7.0",
+    "PySide6-stubs>=6.7.3",
+    "qt6-tools>=6.5.0",
     "pillow>=10.0.0",
 ]
 
@@ -124,7 +125,7 @@ extend-exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
-known_first_party = ["rs_pa", "agents", "core", "models", "ui"]
+known_first_party = ["src", "rs_pa", "agents", "core", "models", "ui"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
@@ -150,7 +151,7 @@ markers = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["rs_pa", "agents", "core", "models", "ui"]
+source = ["src"]
 omit = [
     "tests/*",
     "setup.py",
@@ -196,3 +197,10 @@ module = [
     "alembic.*",
 ]
 ignore_errors = true
+
+# Package configuration for src layout
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
