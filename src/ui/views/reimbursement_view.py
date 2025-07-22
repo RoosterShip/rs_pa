@@ -6,9 +6,9 @@ with date selection, scanning controls, results table, and export functionality.
 """
 
 import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QDate, QModelIndex, Qt, QTimer, Signal
+from PySide6.QtCore import QDate, QModelIndex, Qt, Signal
 from PySide6.QtWidgets import (
     QDateEdit,
     QFileDialog,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...agents.reimbursement.agent import ReimbursementAgent
 from ..dialogs.expense_detail_dialog import ExpenseDetailDialog
 from ..models.reimbursement_results_model import ReimbursementResultsModel
 from ..widgets.progress_widget import ProgressWidget
@@ -52,8 +53,13 @@ class ReimbursementView(QWidget):
         """
         super().__init__(parent)
 
+        # Initialize the reimbursement agent
+        self._agent = ReimbursementAgent(parent=self)
+        self._agent.initialize()
+
         self._setup_ui()
         self._setup_connections()
+        self._setup_agent_connections()
         self._setup_mock_data()
 
     def _setup_ui(self) -> None:
@@ -302,6 +308,13 @@ class ReimbursementView(QWidget):
         self._results_model.dataChanged.connect(self._update_summary)
         self._results_model.modelReset.connect(self._update_summary)
 
+    def _setup_agent_connections(self) -> None:
+        """Set up reimbursement agent signal connections."""
+        self._agent.status_changed.connect(self._handle_agent_status_change)
+        self._agent.progress_updated.connect(self._handle_agent_progress)
+        self._agent.result_ready.connect(self._handle_agent_result)
+        self._agent.error_occurred.connect(self._handle_agent_error)
+
     def _setup_mock_data(self) -> None:
         """Set up initial mock data for demonstration."""
         # This will be populated with actual scan results
@@ -330,24 +343,81 @@ class ReimbursementView(QWidget):
             )
             return
 
-        # Start scanning simulation
+        # Start real agent scanning
         self._scan_button.setEnabled(False)
         self._scan_button.setText("🔍 Scanning...")
         self._progress_widget.start_progress("Scanning emails for expenses...")
 
-        # Emit signal for external handling
+        # Emit signal for external handling (for potential future use)
         self.scan_requested.emit(start_date, end_date)
 
-        # Simulate scanning with timer
-        self._simulate_scan()
+        # Execute the real reimbursement agent
+        gmail_query = f"has:attachment after:{start_date} before:{end_date}"
+        input_data = {
+            "gmail_query": gmail_query,
+            "max_emails": 20,  # Configurable max emails
+        }
 
-    def _simulate_scan(self) -> None:
-        """Simulate the scanning process with mock results."""
-        # Create timer for simulation
-        self._scan_timer = QTimer()
-        self._scan_timer.timeout.connect(self._complete_scan)
-        self._scan_timer.setSingleShot(True)
-        self._scan_timer.start(3000)  # 3 seconds simulation
+        success = self._agent.execute(input_data)
+        if not success:
+            self._handle_scan_error("Failed to start reimbursement agent")
+
+    def _handle_agent_status_change(self, status: str) -> None:
+        """Handle agent status change."""
+        if status == "completed":
+            self._complete_scan()
+        elif status == "error":
+            self._handle_scan_error("Agent execution failed")
+
+    def _handle_agent_progress(self, progress: int) -> None:
+        """Handle agent progress updates."""
+        self._progress_widget.update_progress(progress)
+
+    def _handle_agent_result(self, result: Dict[str, Any]) -> None:
+        """Handle agent results."""
+        # Update the results model with real data
+        expense_results = result.get("expense_results", [])
+        self._results_model.clear_results()
+
+        # Import the ExpenseData class
+        from ..models.reimbursement_results_model import ExpenseData
+
+        for expense_data in expense_results:
+            # Convert agent result format to ExpenseData format
+            # Parse date from string to datetime if needed
+            import datetime as dt
+
+            expense_date = expense_data.get("expense_date") or expense_data.get(
+                "email_date", ""
+            )
+            if isinstance(expense_date, str) and expense_date:
+                try:
+                    expense_datetime = dt.datetime.fromisoformat(expense_date)
+                except (ValueError, TypeError):
+                    expense_datetime = dt.datetime.now()
+            elif isinstance(expense_date, dt.datetime):
+                expense_datetime = expense_date
+            else:
+                expense_datetime = dt.datetime.now()
+
+            expense = ExpenseData(
+                date=expense_datetime,
+                subject=expense_data.get("email_subject", ""),
+                sender=expense_data.get("email_from", "Unknown"),
+                vendor=expense_data.get("vendor", "Unknown"),
+                amount=expense_data.get("amount", 0.0),
+                category=expense_data.get("category", "Other"),
+                status="Reimbursable",  # Default status for detected expenses
+                description=expense_data.get("description", ""),
+                confidence=expense_data.get("confidence_score", 0.0)
+                * 100,  # Convert to 0-100 scale
+                email_id=expense_data.get("gmail_message_id", ""),
+            )
+            self._results_model.add_expense(expense)
+
+    def _handle_agent_error(self, error_msg: str) -> None:
+        """Handle agent errors."""
+        self._handle_scan_error(error_msg)
 
     def _complete_scan(self) -> None:
         """Complete the scanning process and show results."""
@@ -355,9 +425,6 @@ class ReimbursementView(QWidget):
         self._progress_widget.stop_progress()
         self._scan_button.setEnabled(True)
         self._scan_button.setText("🔍 Scan for Expenses")
-
-        # Generate mock scan results
-        self._results_model.generate_mock_results()
 
         # Enable export button
         self._export_button.setEnabled(True)
@@ -373,6 +440,21 @@ class ReimbursementView(QWidget):
             f"Scan completed successfully!\n\n"
             f"Found {result_count} potential expense entries.\n"
             f"Review the results below and export when ready.",
+        )
+
+    def _handle_scan_error(self, error_msg: str) -> None:
+        """Handle scan errors."""
+        # Stop progress
+        self._progress_widget.stop_progress()
+        self._scan_button.setEnabled(True)
+        self._scan_button.setText("🔍 Scan for Expenses")
+
+        # Show error message
+        QMessageBox.critical(
+            self,
+            "Scan Error",
+            f"Expense scanning failed:\n\n{error_msg}\n\n"
+            f"Please check your Gmail connection and try again.",
         )
 
     def _handle_export_request(self) -> None:

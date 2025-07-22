@@ -236,34 +236,34 @@ This approach ensures:
 - Task 2.2 completed (Gmail and Ollama connections with native UI)
 
 **Acceptance Criteria**:
-- [ ] Add LangGraph and LangSmith dependencies to requirements (`langgraph>=0.2.0`, `langsmith>=0.1.0`)
-- [ ] Create `src/agents/__init__.py` and `src/agents/base_agent.py` abstract base class using LangGraph StateGraph
-- [ ] Implement LangGraph-based `src/agents/reimbursement/agent.py` with:
+- [x] Add LangGraph and LangSmith dependencies to requirements (`langgraph>=0.2.0`, `langsmith>=0.1.0`)
+- [x] Create `src/agents/__init__.py` and `src/agents/base_agent.py` abstract base class using LangGraph StateGraph
+- [x] Implement LangGraph-based `src/agents/reimbursement/agent.py` with:
   - StateGraph with nodes for email fetching, processing, and result storage
   - Email fetching node that retrieves recent emails from Gmail API
   - Processing node with simple text-based expense detection using keyword matching
   - Data extraction node (amount, vendor, date, expense category)
   - State management for agent workflow with persistent state storage
   - Save results to database with proper SQLAlchemy models
-- [ ] Create `src/agents/reimbursement/graph.py` defining the LangGraph workflow:
+- [x] Create `src/agents/reimbursement/graph.py` defining the LangGraph workflow:
   - Define agent state schema with typed state variables
   - Create workflow nodes (fetch_emails, process_emails, extract_data, store_results)
   - Configure conditional edges based on processing results
   - Implement error handling and retry logic within the graph
-- [ ] Create `src/agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
-- [ ] Create `src/core/agent_manager.py` for LangGraph agent lifecycle management:
+- [x] Create `src/agents/reimbursement/models.py` for ExpenseScan and ExpenseResult data structures
+- [x] Create `src/core/agent_manager.py` for LangGraph agent lifecycle management:
   - Integration with LangSmith for tracing and monitoring
   - Environment variables for LangSmith (`LANGSMITH_API_KEY`, `LANGSMITH_TRACING=true`)
   - Agent state persistence and recovery
-- [ ] Connect reimbursement native UI to LangGraph agent:
+- [x] Connect reimbursement native UI to LangGraph agent:
   - "Scan for Expenses" QPushButton triggers actual LangGraph workflow
   - QProgressBar shows real scanning progress with Qt signals
   - QTableView displays real Gmail results via model updates
   - Save and retrieve scan history from database
-- [ ] Add LangGraph state management (running, idle, error) with Qt signals for UI updates
-- [ ] Implement native error handling with QMessageBox dialogs
-- [ ] Add agent status updates to dashboard table in real-time
-- [ ] Configure LangSmith integration for workflow monitoring and debugging
+- [x] Add LangGraph state management (running, idle, error) with Qt signals for UI updates
+- [x] Implement native error handling with QMessageBox dialogs
+- [x] Add agent status updates to dashboard table in real-time
+- [x] Configure LangSmith integration for workflow monitoring and debugging
 
 **Result**: Working LangGraph-based reimbursement agent that processes real Gmail emails with stateful workflow management, native desktop UI feedback, database persistence, and LangSmith monitoring.
 

@@ -204,6 +204,14 @@ module = [
 ]
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = [
+    "src.agents.reimbursement.models",
+    "src.models.*",
+]
+# SQLAlchemy model files have known Column[int] vs int compatibility issues
+disable_error_code = ["assignment"]
+
 # Package configuration for src layout
 [tool.setuptools.packages.find]
 where = ["src"]
